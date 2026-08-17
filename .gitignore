@@ -1,0 +1,21 @@
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/*.pyc
+
+# Node
+frontend/node_modules/
+
+# Build
+frontend/dist/
+
+# Env
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.cursor/
