@@ -1,12 +1,55 @@
 :root {
+  /* 主色 */
   --color-primary: #409eff;
+  --color-primary-light: #ecf5ff;
+  --color-primary-hover: #66b1ff;
 
+  /* 页面背景 */
   --bg-page: #f5f7fa;
+  --bg-card: #ffffff;
 
+  /* Header */
+  --bg-header: #ffffff;
+
+  /* Sidebar */
+  --bg-sidebar: #ffffff;
+  --bg-sidebar-hover: #f5f7fa;
+  --bg-sidebar-active: #ecf5ff;
+
+  /* 通用状态 */
+  --bg-hover: #f5f7fa;
+  --bg-active: #ecf5ff;
+
+  /* 文字 */
   --text-primary: #303133;
   --text-secondary: #606266;
+  --text-placeholder: #909399;
+  --text-disabled: #c0c4cc;
 
+  /* Sidebar文字 */
+  --sidebar-text: #303133;
+  --sidebar-text-hover: #409eff;
+  --sidebar-text-active: #409eff;
+
+  /* 边框 */
   --border-color: #dcdfe6;
+  --border-light: #ebeef5;
 
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  /* 圆角 */
+  --radius-sm: 6px;
   --radius: 8px;
+  --radius-lg: 12px;
+
+  /* Header */
+  --header-height: 56px;
+
+  /* Sidebar */
+  --sidebar-width: 220px;
+
+  /* 内容区 */
+  --content-padding: 24px;
 }
