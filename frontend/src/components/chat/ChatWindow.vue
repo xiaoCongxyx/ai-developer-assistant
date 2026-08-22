@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue';
 import ChatMessage from './ChatMessage.vue';
-import type { Message } from '@/types/chat';
+import { useChatStore } from '@/stores/chat.ts';
 
-const props = defineProps<{
-  messages: Message[]
-}>()
+
+const chatStore = useChatStore()
 
 const chatWindowDom = ref<HTMLDivElement>()
 
@@ -14,7 +13,7 @@ const scrollToBottom = async () => {
   await nextTick()
 
   if(!chatWindowDom.value) return;
-  
+
   // chatWindowDom.value.scrollTop = chatWindowDom.value.scrollHeight
   chatWindowDom.value.scrollTo({
     top: chatWindowDom.value.scrollHeight,
@@ -25,7 +24,7 @@ const scrollToBottom = async () => {
 
 // 监听消息列表的变化 来决定是否需要自动滚动
 watch(
-  () => props.messages.length,
+  () => chatStore.messages.length,
   () => {
     scrollToBottom()
   },
@@ -39,7 +38,7 @@ watch(
 <template>
   <div class="chat-window" ref="chatWindowDom">
     <ChatMessage
-      v-for="message in messages"
+      v-for="message in chatStore.messages"
       :key="message.id"
       :message="message"
     />

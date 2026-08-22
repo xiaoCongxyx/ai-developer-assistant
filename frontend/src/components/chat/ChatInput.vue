@@ -5,10 +5,11 @@ const emit = defineEmits<{
   send: [content: string]
 }>()
 
+// 用来维护发送按钮状态 防止用户重复发送
+const props = defineProps<{loading:boolean}>()
+
 const inputValue = ref('')
 
-// 用来维护发送按钮状态 防止用户重复发送
-const loading = ref(false)
 
 const sendMsg = () => {
   const content  = inputValue.value.trim()
@@ -50,7 +51,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
 
       <el-button
         type="primary"
-        :disable="loading"
+        :loading="loading"
         @click="sendMsg"
       >
         发送
