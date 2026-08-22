@@ -9,7 +9,26 @@ router = APIRouter()
 async def chat_api(request: ChatRequest):
   content = await chat(request.message)
 
+  # return ChatResponse(
+  #   success=True,
+  #   content=content,
+  # )
+
   return ChatResponse(
     success=True,
-    content=content,
+    content="""
+# Vue 示例
+
+这是一个测试
+
+**加粗文本**
+
+- Vue
+- FastAPI
+- TypeScript
+
+```js
+const msg = 'hello'
+console.log(msg)
+"""
   )

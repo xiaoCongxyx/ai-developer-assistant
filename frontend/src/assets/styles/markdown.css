@@ -1,0 +1,165 @@
+.hljs {
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+/* Markdown 容器 */
+
+.markdown-body {
+  line-height: 1.8;
+  word-break: break-word;
+}
+
+/* 标题 */
+
+.markdown-body h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 20px 0 12px;
+}
+
+.markdown-body h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 18px 0 10px;
+}
+
+.markdown-body h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 16px 0 8px;
+}
+
+.markdown-body h4 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 14px 0 8px;
+}
+
+/* 段落 */
+
+.markdown-body p {
+  margin: 8px 0;
+}
+
+/* 列表 */
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.markdown-body li {
+  margin: 4px 0;
+}
+
+/* 引用 */
+
+.markdown-body blockquote {
+  margin: 12px 0;
+  padding: 8px 16px;
+  border-left: 4px solid var(--color-primary);
+  background: #f5f7fa;
+  color: var(--text-secondary);
+}
+
+/* 链接 */
+
+.markdown-body a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+/* 分割线 */
+
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 20px 0;
+}
+
+/* 表格 */
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+}
+
+.markdown-body th {
+  background: #f5f7fa;
+  font-weight: 600;
+}
+
+/* 图片 */
+
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 12px 0;
+}
+
+/* 行内代码 */
+
+.markdown-body :not(pre) > code {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #f1f2f4;
+  font-size: 14px;
+  font-family:
+    Monaco,
+    Consolas,
+    'Courier New',
+    monospace;
+}
+
+/* 代码块 */
+
+.markdown-body pre {
+  margin: 12px 0;
+  padding: 16px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: #f6f8fa;
+}
+
+.markdown-body pre code {
+  padding: 0;
+  background: transparent;
+  font-family:
+    Monaco,
+    Consolas,
+    'Courier New',
+    monospace;
+}
+
+/* highlight.js */
+
+.markdown-body .hljs {
+  background: transparent;
+  padding: 0;
+}
+
+/* 加粗 */
+
+.markdown-body strong {
+  font-weight: 700;
+}
+
+/* 斜体 */
+
+.markdown-body em {
+  font-style: italic;
+}

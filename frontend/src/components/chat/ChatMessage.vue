@@ -1,22 +1,29 @@
 <script setup lang="ts">
-import { User } from '@element-plus/icons-vue';
-
 import type { Message } from '@/types/chat';
+import md from '@/utils/markdown';
+import { computed } from 'vue';
 
 const msgProps = defineProps<{
   message: Message
 }>()
+
+const htmlContent = computed(() => {
+  return md.render(msgProps.message.content)
+})
+
+const isUser = computed(() => {
+  return msgProps.message.role === 'user'
+})
+
 
 </script>
 
 <template>
 <div
   class="message"
-  :class="message.role"
+  :class="msgProps.message.role"
 >
-  <div class="bubble">
-    {{ message.content }}
-  </div>
+  <div class="bubble markdown-body" v-html="htmlContent"></div>
 </div>
 </template>
 
