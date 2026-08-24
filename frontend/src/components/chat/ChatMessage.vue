@@ -23,7 +23,13 @@ const isUser = computed(() => {
   class="message"
   :class="msgProps.message.role"
 >
-  <div class="bubble markdown-body" v-html="htmlContent"></div>
+  <div
+    v-if="msgProps.message.loading"
+    class="thinking"
+  >
+    AI 正在思考...
+  </div>
+  <div v-else class="bubble markdown-body" v-html="htmlContent"></div>
 </div>
 </template>
 
@@ -61,6 +67,11 @@ const isUser = computed(() => {
   background: white;
 
   border: 1px solid var(--border-color);
+}
+
+.thinking {
+  color: #909399;
+  font-style: italic;
 }
 
 </style>

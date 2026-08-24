@@ -28,6 +28,7 @@ const handleSend = async (content: string) => {
   // })
 
   chatStore.setLoading(true)
+  // chatStore.addLoadingMessage()
 
   // 模拟ai回应
   try {
@@ -35,17 +36,16 @@ const handleSend = async (content: string) => {
     //   chatStore.addMessage(createMessage('assistant', `收到你的问题：${content}`))
     //   chatStore.setLoading(false)
     // }, 1500);
+    chatStore.addLoadingMessage()
     const res = await sendChatMessage({
       message: content
     })
     
-    chatStore.addMessage(createMessage('assistant', res.content))
+    chatStore.replaceLoadingMessage(res.content)
   } catch (error) {
     console.error(error)
     // 错误提示处理
-    chatStore.addMessage(
-      createMessage('assistant', '服务器连接失败，请稍后重试。')
-    )
+    chatStore.replaceLoadingMessage('服务器连接失败，请稍后重试。')
   } finally {
     chatStore.setLoading(false)
   }

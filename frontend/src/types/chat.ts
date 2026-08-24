@@ -8,6 +8,8 @@ export interface Message {
   content: string
 
   createdAt: string 
+
+  loading?: boolean
 }
 
 export interface Conversation {
@@ -19,5 +21,5 @@ export interface Conversation {
 
   updatedAt: string
 
-  lastMessage?: string
+  messages: Message[]
 }

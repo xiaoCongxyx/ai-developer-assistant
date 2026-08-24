@@ -1,4 +1,4 @@
-import type { Message } from "@/types/chat";
+import type { Message, Conversation } from "@/types/chat";
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
@@ -31,13 +31,35 @@ export const useChatStore = defineStore('chat', () => {
     loading.value = state
   }
 
+  // loading时的消息提示
+  const addLoadingMessage = () => {
+    messages.value.push({
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: '',
+      createdAt: new Date().toISOString(),
+      loading: true
+    })
+  }
+
+  const replaceLoadingMessage = (content: string) => {
+    const msg = messages.value.find(item => item.loading)
+
+    if(!msg) return;
+
+    msg.loading = false
+    msg.content = content
+  }
+
 
   return {
     loading,
     messages,
     addMessage,
     clearMessages,
-    setLoading
+    setLoading,
+    addLoadingMessage,
+    replaceLoadingMessage
   }
 
 })
