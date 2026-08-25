@@ -7,6 +7,8 @@ import {
   Setting,
 } from '@element-plus/icons-vue'
 
+import ConversationList from '../sidebar/ConversationList.vue';
+
 const menus = [
   {
     path: '/chat',
@@ -42,25 +44,33 @@ const menus = [
       🤖 Assistant
     </div>
 
-    <el-menu
-      router
-      default-active="/chat"
-      class="menu"
-    >
-      <el-menu-item
-        v-for="item in menus"
-        :key="item.path"
-        :index="item.path"
-      >
-        <el-icon>
-          <component :is="item.icon" />
-        </el-icon>
+    <!-- 会话列表 -->
+    <ConversationList />
 
-        <span>
-          {{ item.title }}
-        </span>
-      </el-menu-item>
-    </el-menu>
+
+    <!-- 功能菜单 -->
+
+    <div class="menu-wrapper">
+      <el-menu
+        router
+        default-active="/chat"
+        class="menu"
+      >
+        <el-menu-item
+          v-for="item in menus"
+          :key="item.path"
+          :index="item.path"
+        >
+          <el-icon>
+            <component :is="item.icon" />
+          </el-icon>
+
+          <span>
+            {{ item.title }}
+          </span>
+        </el-menu-item>
+      </el-menu>
+    </div>
   </aside>
 </template>
 
@@ -68,27 +78,25 @@ const menus = [
 .sidebar {
   width: var(--sidebar-width);
   height: 100%;
-
   display: flex;
   flex-direction: column;
-
   background: var(--bg-sidebar);
-
   border-right: 1px solid var(--border-color);
 }
 
 .sidebar-logo {
   height: var(--header-height);
-
   display: flex;
   align-items: center;
-
   padding: 0 20px;
-
   font-size: 18px;
   font-weight: 600;
-
   border-bottom: 1px solid var(--border-light);
+}
+
+.menu-wrapper{
+  margin-top:auto;
+  padding-bottom:20px;
 }
 
 :deep(.el-menu) {
@@ -115,7 +123,6 @@ const menus = [
 :deep(.el-menu-item.is-active) {
   background: var(--bg-sidebar-active);
   color: var(--sidebar-text-active);
-
   font-weight: 600;
 }
 

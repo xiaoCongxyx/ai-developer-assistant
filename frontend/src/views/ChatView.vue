@@ -1,25 +1,30 @@
 <script setup lang="ts">
-import ChatHeader from '@/components/chat/ChatHeader.vue';
-import ChatInput from '@/components/chat/ChatInput.vue';
-import ChatWindow from '@/components/chat/ChatWindow.vue';
+import ChatHeader from '@/components/chat/ChatHeader.vue'
+import ChatInput from '@/components/chat/ChatInput.vue'
+import ChatWindow from '@/components/chat/ChatWindow.vue'
 
-import { useChatStore } from '@/stores/chat';
-import { createMessage } from '@/utils/chat';
+import { useChatStore } from '@/stores/chat'
+import { createMessage } from '@/utils/chat'
 
-import { sendChatMessage } from '@/api/chat';
+import { sendChatMessage } from '@/api/chat'
+import { generateTitle } from '@/utils/conversation'
 
 const chatStore = useChatStore()
 
-
 const handleSend = async (content: string) => {
-  if(!content.trim()) return;
+  if (!content.trim()) return
   // 防止重复发送
-  if(chatStore.loading) return;
+  if (chatStore.loading) return
+
+  // ⭐ 第一条消息生成标题
+  const conversation = chatStore.currentConversation
+
+  if (conversation && conversation.title === '新聊天' && conversation.messages.length === 1) {
+    chatStore.updateConversationTitle(generateTitle(content))
+  }
 
   // 把客户的问题push到消息列表中去
-  chatStore.addMessage(
-    createMessage('user',content)
-  )
+  chatStore.addMessage(createMessage('user', content))
   // chatStore.addMessage({
   //   id: crypto.randomUUID(),
   //   role: 'user',
@@ -38,9 +43,9 @@ const handleSend = async (content: string) => {
     // }, 1500);
     chatStore.addLoadingMessage()
     const res = await sendChatMessage({
-      message: content
+      message: content,
     })
-    
+
     chatStore.replaceLoadingMessage(res.content)
   } catch (error) {
     console.error(error)
@@ -50,17 +55,16 @@ const handleSend = async (content: string) => {
     chatStore.setLoading(false)
   }
 }
-
 </script>
 
 <template>
-<div class="chat-page">
-  <ChatHeader />
+  <div class="chat-page">
+    <ChatHeader />
 
-  <ChatWindow />
+    <ChatWindow />
 
-  <ChatInput :loading = "chatStore.loading" @send="handleSend" />
-</div>
+    <ChatInput :loading="chatStore.loading" @send="handleSend" />
+  </div>
 </template>
 
 <style scoped>

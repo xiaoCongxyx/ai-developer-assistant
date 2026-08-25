@@ -12,23 +12,29 @@ const chatWindowDom = ref<HTMLDivElement>()
 const scrollToBottom = async () => {
   await nextTick()
 
-  if(!chatWindowDom.value) return;
+  const el = chatWindowDom.value
 
-  // chatWindowDom.value.scrollTop = chatWindowDom.value.scrollHeight
-  chatWindowDom.value.scrollTo({
-    top: chatWindowDom.value.scrollHeight,
-    behavior: 'smooth' 
+  if(!el) return;
+
+
+  // 用requestAnimationFrame是因为有时候DOM更新了，但是浏览器布局还没完成，使用requestAnimationFrame等待浏览器下一次绘制更加稳定
+  requestAnimationFrame(() => {
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: 'smooth'
+    })
   })
 
 }
 
 // 监听消息列表的变化 来决定是否需要自动滚动
 watch(
-  () => chatStore.messages.length,
+  () => chatStore.currentConversation?.messages,
   () => {
     scrollToBottom()
   },
   {
+    deep: true,
     immediate: true
   }
 )
@@ -38,7 +44,7 @@ watch(
 <template>
   <div class="chat-window" ref="chatWindowDom">
     <ChatMessage
-      v-for="message in chatStore.messages"
+      v-for="message in chatStore.currentConversation?.messages"
       :key="message.id"
       :message="message"
     />
@@ -47,13 +53,14 @@ watch(
 
 <style scoped>
 .chat-window {
-  flex: 1;
-  min-height: 0;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-  scroll-behavior: smooth;
+  flex:1;
+  min-height:0;
+  padding:24px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  overflow-y:auto;
+  scroll-behavior:smooth;
+  overflow-anchor:none;
 }
 </style>
