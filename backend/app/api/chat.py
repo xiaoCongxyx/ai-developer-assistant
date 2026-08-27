@@ -1,7 +1,8 @@
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.services.chat import chat
+from app.services.chat import chat, chat_stream
 
 router = APIRouter()
 
@@ -9,26 +10,15 @@ router = APIRouter()
 async def chat_api(request: ChatRequest):
   content = await chat(request.message)
 
-  # return ChatResponse(
-  #   success=True,
-  #   content=content,
-  # )
-
   return ChatResponse(
     success=True,
-    content="""
-# Vue 示例
+    content=content,
+  )
 
-这是一个测试
+@router.post('/chat/stream')
+async def chat_stream_api(request: ChatRequest):
 
-**加粗文本**
-
-- Vue
-- FastAPI
-- TypeScript
-
-```js
-const msg = 'hello'
-console.log(msg)
-"""
+  return StreamingResponse(
+    chat_stream(request.message),
+    media_type="text/plain",
   )
