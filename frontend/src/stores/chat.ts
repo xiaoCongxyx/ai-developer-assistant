@@ -127,6 +127,22 @@ export const useChatStore = defineStore('chat', () => {
     conversation.updatedAt = new Date().toISOString()
   }
 
+  // 追加流式消息内容
+  const appendStreamingMessage = (content: string) => {
+    const conversation = currentConversation.value
+    if(!conversation) return;
+
+    // 拿到消息列表最后一条消息
+    const message = conversation.messages[conversation.messages.length - 1]
+
+    if(!message?.loading) return
+
+    message.content += content
+
+    conversation.updatedAt = new Date().toISOString()
+
+  }
+
   // 清空会话消息
   const clearMessages = () => {
     const conversation = currentConversation.value
@@ -183,7 +199,8 @@ export const useChatStore = defineStore('chat', () => {
     clearMessages,
     setLoading,
     addLoadingMessage,
-    replaceLoadingMessage
+    replaceLoadingMessage,
+    appendStreamingMessage
   }
 
 })

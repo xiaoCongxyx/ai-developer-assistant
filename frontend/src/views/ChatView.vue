@@ -6,10 +6,22 @@ import ChatWindow from '@/components/chat/ChatWindow.vue'
 import { useChatStore } from '@/stores/chat'
 import { createMessage } from '@/utils/chat'
 
-import { sendChatMessage } from '@/api/chat'
+import { sendChatMessage, streamChatMessage } from '@/api/chat'
 import { generateTitle } from '@/utils/conversation'
 
 const chatStore = useChatStore()
+
+// 测试流式数据
+const testStream = async () => {
+  const res = await streamChatMessage(
+    {
+      message: '你好',
+    },
+    (chunk) => {
+      console.log(`收到 chunk：${chunk}`)
+    },
+  )
+}
 
 const handleSend = async (content: string) => {
   if (!content.trim()) return
@@ -25,28 +37,24 @@ const handleSend = async (content: string) => {
 
   // 把客户的问题push到消息列表中去
   chatStore.addMessage(createMessage('user', content))
-  // chatStore.addMessage({
-  //   id: crypto.randomUUID(),
-  //   role: 'user',
-  //   content,
-  //   createdAt: new Date().toISOString()
-  // })
 
   chatStore.setLoading(true)
   // chatStore.addLoadingMessage()
 
   // 模拟ai回应
   try {
-    // setTimeout(() => {
-    //   chatStore.addMessage(createMessage('assistant', `收到你的问题：${content}`))
-    //   chatStore.setLoading(false)
-    // }, 1500);
     chatStore.addLoadingMessage()
-    const res = await sendChatMessage({
-      message: content,
-    })
+    // 非流式请求
+    // const res = await sendChatMessage({
+    //   message: content,
+    // })
 
-    chatStore.replaceLoadingMessage(res.content)
+    // chatStore.replaceLoadingMessage(res.content)
+
+    // 流式请求返回结果
+    await streamChatMessage({ message: content }, (chunk) => {
+      chatStore.appendStreamingMessage(chunk)
+    })
   } catch (error) {
     console.error(error)
     // 错误提示处理

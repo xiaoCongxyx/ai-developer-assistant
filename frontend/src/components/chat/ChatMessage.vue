@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { Message } from '@/types/chat';
-import md from '@/utils/markdown';
-import { computed } from 'vue';
+import type { Message } from '@/types/chat'
+import md from '@/utils/markdown'
+import { computed } from 'vue'
 
 const msgProps = defineProps<{
   message: Message
@@ -14,23 +14,17 @@ const htmlContent = computed(() => {
 const isUser = computed(() => {
   return msgProps.message.role === 'user'
 })
-
-
 </script>
 
 <template>
-<div
-  class="message"
-  :class="msgProps.message.role"
->
-  <div
-    v-if="msgProps.message.loading"
-    class="thinking"
-  >
-    AI 正在思考...
+  <div class="message" :class="msgProps.message.role">
+    <div class="bubble markdown-body">
+      <div v-if="msgProps.message.loading && !msgProps.message.content" class="thinking">
+        AI 正在思考...
+      </div>
+      <div v-else v-html="htmlContent"></div>
+    </div>
   </div>
-  <div v-else class="bubble markdown-body" v-html="htmlContent"></div>
-</div>
 </template>
 
 <style scoped>
@@ -73,5 +67,4 @@ const isUser = computed(() => {
   color: #909399;
   font-style: italic;
 }
-
 </style>
