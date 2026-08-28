@@ -11,6 +11,14 @@ import { generateTitle } from '@/utils/conversation'
 
 const chatStore = useChatStore()
 
+// 终止请求
+let abortController: AbortController | null = null
+
+// 停止生成handle
+const stopGenerating = () => {
+  abortController?.abort()
+}
+
 // 测试流式数据
 const testStream = async () => {
   const res = await streamChatMessage(
@@ -50,17 +58,26 @@ const handleSend = async (content: string) => {
     // })
 
     // chatStore.replaceLoadingMessage(res.content)
+    abortController = new AbortController()
 
     // 流式请求返回结果
-    await streamChatMessage({ message: content }, (chunk) => {
-      chatStore.appendStreamingMessage(chunk)
-    })
+    await streamChatMessage(
+      { message: content },
+      (chunk) => {
+        chatStore.appendStreamingMessage(chunk)
+      },
+      abortController.signal,
+    )
   } catch (error) {
+    // 如果错误类型是AbortError 代表是用户终止接口 不是接口出错 用户主动停止，不属于异常
+    if (error instanceof DOMException && error.name === 'AbortError') return
+
     console.error(error)
     // 错误提示处理
     chatStore.replaceLoadingMessage('服务器连接失败，请稍后重试。')
   } finally {
     chatStore.setLoading(false)
+    abortController = null
   }
 }
 </script>
@@ -71,7 +88,7 @@ const handleSend = async (content: string) => {
 
     <ChatWindow />
 
-    <ChatInput :loading="chatStore.loading" @send="handleSend" />
+    <ChatInput :loading="chatStore.loading" @send="handleSend" @stop="stopGenerating" />
   </div>
 </template>
 

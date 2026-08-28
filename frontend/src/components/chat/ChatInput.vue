@@ -3,22 +3,21 @@ import { ref } from 'vue'
 
 const emit = defineEmits<{
   send: [content: string]
+  stop: []
 }>()
 
 // 用来维护发送按钮状态 防止用户重复发送
-const props = defineProps<{loading:boolean}>()
+const props = defineProps<{ loading: boolean }>()
 
 const inputValue = ref('')
 
-
 const sendMsg = () => {
-  const content  = inputValue.value.trim()
+  const content = inputValue.value.trim()
 
-  if(!content) return;
+  if (!content) return
   emit('send', content)
 
   inputValue.value = ''
-
 }
 
 const handleKeyDown = (event: KeyboardEvent) => {
@@ -28,8 +27,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
 
     sendMsg()
   }
-} 
-
+}
 </script>
 
 <template>
@@ -42,44 +40,31 @@ const handleKeyDown = (event: KeyboardEvent) => {
       @keydown="handleKeyDown"
     />
 
-
     <div class="input-footer">
+      <span class="tip"> Enter 发送 · Shift + Enter 换行 </span>
 
-      <span class="tip">
-        Enter 发送 · Shift + Enter 换行
-      </span>
-
-      <el-button
-        type="primary"
-        :loading="loading"
-        @click="sendMsg"
-      >
+      <el-button v-if="!loading" type="primary" :loading="loading" @click="sendMsg">
         发送
       </el-button>
-
+      <el-button v-else type="danger" @click="emit('stop')"> 停止生成 </el-button>
     </div>
   </div>
 </template>
 
 <style scoped>
 .chat-input {
-
   padding: 16px 20px;
 
   background: var(--bg-card);
 
   border-top: 1px solid var(--border-light);
-
 }
-
 
 .el-textarea {
   width: 100%;
 }
 
-
 .input-footer {
-
   margin-top: 10px;
 
   display: flex;
@@ -87,12 +72,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
   justify-content: space-between;
 
   align-items: center;
-
 }
 
-
 .tip {
-
   font-size: 12px;
 
   color: var(--text-placeholder);

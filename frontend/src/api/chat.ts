@@ -16,7 +16,7 @@ export const sendChatMessage = (data: ChatRequest): Promise<ChatResponse> => {
 
 // 流式聊天
 export const streamChatMessage = async (
-  data: ChatRequest, onChunk: (chunk: string) => void
+  data: ChatRequest, onChunk: (chunk: string) => void, signal?: AbortSignal
 ) => {
   const response = await fetch(
     'http://127.0.0.1:8000/chat/stream',
@@ -25,8 +25,9 @@ export const streamChatMessage = async (
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(data)
-    }
+      body: JSON.stringify(data),
+      signal
+    },
   )
 
   if(!response.ok) {
@@ -40,12 +41,16 @@ export const streamChatMessage = async (
   const reader = response.body.getReader()
   const decoder = new TextDecoder('utf-8')
 
-  while(true) {
-    const { done, value } = await reader.read()
-    if(done) break;
-
-    const chunk = decoder.decode(value, {stream: true})
-    onChunk(chunk)
+  try {
+    while(true) {
+      const { done, value } = await reader.read()
+      if(done) break;
+  
+      const chunk = decoder.decode(value, {stream: true})
+      onChunk(chunk)
+    }
+  } catch (error) {
+    reader.releaseLock()
   }
 
 }
