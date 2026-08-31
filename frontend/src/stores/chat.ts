@@ -186,8 +186,10 @@ export const useChatStore = defineStore('chat', () => {
     const conversation = currentConversation.value
     if(!conversation) return;
 
+    if(!streamingMessageId.value) return
+
     // 拿到消息列表最后一条消息
-    const message = conversation.messages[conversation.messages.length - 1]
+    const message = conversation.messages.find(v => v.id === streamingMessageId.value)
 
     if(!message?.loading) return
 
