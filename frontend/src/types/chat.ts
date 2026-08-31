@@ -10,6 +10,8 @@ export interface Message {
   createdAt: string 
 
   loading?: boolean
+
+  isWelcome?: boolean
 }
 
 export interface Conversation {

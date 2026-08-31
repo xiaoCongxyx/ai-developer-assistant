@@ -19,6 +19,67 @@ const stopGenerating = () => {
   abortController?.abort()
 }
 
+// 抽离AI接口调用逻辑  负责公共的 AI 生成流程。
+const generateAIResponse = async (content: string, loadingIndex?: number) => {
+  chatStore.setLoading(true)
+  // chatStore.addLoadingMessage()
+
+  // 模拟ai回应
+  try {
+    if (loadingIndex === undefined) {
+      chatStore.addLoadingMessage()
+    } else {
+      chatStore.addLoadingMessage(loadingIndex)
+    }
+
+    abortController = new AbortController()
+
+    // 流式请求返回结果
+    await streamChatMessage(
+      { message: content },
+      (chunk) => {
+        chatStore.appendStreamingMessage(chunk)
+      },
+      abortController.signal,
+    )
+    // 完成流式请求后要设置loading状态
+    chatStore.finishStreamingMessage()
+  } catch (error) {
+    // 如果错误类型是AbortError 代表是用户终止接口 不是接口出错 用户主动停止，不属于异常
+    if (error instanceof DOMException && error.name === 'AbortError') return
+
+    console.error(error)
+    // 错误提示处理
+    chatStore.replaceLoadingMessage('服务器连接失败，请稍后重试。')
+  } finally {
+    chatStore.setLoading(false)
+    abortController = null
+  }
+}
+
+// 重新生成
+const handleRegenerate = async (id: string) => {
+  if (chatStore.loading) return
+
+  const conversation = chatStore.currentConversation
+
+  if (!conversation) return
+
+  const index = conversation.messages.findIndex((v) => v.id === id)
+
+  if (index === -1) return
+
+  const userMessage = chatStore.getPreviousUserMessage(id)
+
+  if (!userMessage) return
+
+  // 删除旧的AI回复
+  chatStore.removeMessage(id)
+
+  // 在旧 AI 消息的位置重新生成
+  await generateAIResponse(userMessage.content, index)
+}
+
 // 测试流式数据
 const testStream = async () => {
   const res = await streamChatMessage(
@@ -46,39 +107,7 @@ const handleSend = async (content: string) => {
   // 把客户的问题push到消息列表中去
   chatStore.addMessage(createMessage('user', content))
 
-  chatStore.setLoading(true)
-  // chatStore.addLoadingMessage()
-
-  // 模拟ai回应
-  try {
-    chatStore.addLoadingMessage()
-    // 非流式请求
-    // const res = await sendChatMessage({
-    //   message: content,
-    // })
-
-    // chatStore.replaceLoadingMessage(res.content)
-    abortController = new AbortController()
-
-    // 流式请求返回结果
-    await streamChatMessage(
-      { message: content },
-      (chunk) => {
-        chatStore.appendStreamingMessage(chunk)
-      },
-      abortController.signal,
-    )
-  } catch (error) {
-    // 如果错误类型是AbortError 代表是用户终止接口 不是接口出错 用户主动停止，不属于异常
-    if (error instanceof DOMException && error.name === 'AbortError') return
-
-    console.error(error)
-    // 错误提示处理
-    chatStore.replaceLoadingMessage('服务器连接失败，请稍后重试。')
-  } finally {
-    chatStore.setLoading(false)
-    abortController = null
-  }
+  await generateAIResponse(content)
 }
 </script>
 
@@ -86,7 +115,7 @@ const handleSend = async (content: string) => {
   <div class="chat-page">
     <ChatHeader />
 
-    <ChatWindow />
+    <ChatWindow @regenerate="handleRegenerate" />
 
     <ChatInput :loading="chatStore.loading" @send="handleSend" @stop="stopGenerating" />
   </div>

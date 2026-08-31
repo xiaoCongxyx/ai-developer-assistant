@@ -9,8 +9,15 @@ import { saveChatStorage, loadChatStorage } from "@/services/chatStorage";
 
 export const useChatStore = defineStore('chat', () => {
 
+  /**
+   * 我把请求状态和消息状态分开管理。loading 表示当前是否存在进行中的 AI 请求，streamingMessageId 用于定位具体正在生成的消息。这样不仅支持普通发送，也能支持历史消息重新生成，避免依赖消息数组最后一项。
+   */
+
   // AI是否在处理请求loading
   const loading = ref(false)
+
+  // 当前正在流式生成的消息 ID
+  const streamingMessageId = ref<string | null>(null)
 
   // 所有会话
   const conversations = ref<Conversation[]>([])
@@ -68,7 +75,7 @@ export const useChatStore = defineStore('chat', () => {
       createdAt: now,
       updatedAt: now,
       messages: [
-        createMessage('assistant','欢迎使用 AI Developer Assistant')
+        createMessage('assistant','欢迎使用 AI Developer Assistant', { isWelcome: true })
       ]
     }
 
@@ -127,6 +134,53 @@ export const useChatStore = defineStore('chat', () => {
     conversation.updatedAt = new Date().toISOString()
   }
 
+  // 插入消息
+  const insertMessage = (index: number, message: Message) => {
+    const conversation = currentConversation.value
+    if(!conversation) return;
+    conversation.messages.splice(index, 0, message)
+    conversation.updatedAt = new Date().toISOString()
+  }
+
+  // 移除消息 
+  const removeMessage = (messageId: string) => {
+    const conversation = currentConversation.value
+    if(!conversation) return;
+
+    conversation.messages = conversation.messages.filter(v => {
+      return v.id !== messageId
+    })
+
+    // 如果正在生成的消息被删除，我们应该同步清理
+    if (streamingMessageId.value === messageId) {
+      streamingMessageId.value = null
+    }
+
+    conversation.updatedAt = new Date().toISOString()
+
+  }
+
+  // 获取上一条用户消息
+  const getPreviousUserMessage = (messageId: string) => {
+    const conversation = currentConversation.value
+    if(!conversation) return
+
+    const index = conversation.messages.findIndex(v => v.id === messageId)
+
+    if(index <= 0) return null
+
+    for(let i = index -1; i >= 0; i--) {
+      const message = conversation.messages[i]
+
+      if(message?.role === 'user') {
+        return message
+      }
+    }
+
+    return null
+
+  }
+
   // 追加流式消息内容
   const appendStreamingMessage = (content: string) => {
     const conversation = currentConversation.value
@@ -143,6 +197,27 @@ export const useChatStore = defineStore('chat', () => {
 
   }
 
+  // 流式请求完成 
+  const finishStreamingMessage = () => {
+    const conversation = currentConversation.value
+
+    if(!conversation) return
+
+    if(!streamingMessageId.value) return
+
+    const message = conversation.messages.find(v => (v.id === streamingMessageId.value))
+
+    if(!message?.loading) return
+
+    message.loading = false
+
+    conversation.updatedAt = new Date().toISOString()
+
+    // 表示当前没有正在生成的消息
+    streamingMessageId.value = null
+
+  }
+
   // 清空会话消息
   const clearMessages = () => {
     const conversation = currentConversation.value
@@ -151,9 +226,13 @@ export const useChatStore = defineStore('chat', () => {
     conversation.messages=[
       createMessage(
        'assistant',
-       '欢迎使用 AI Developer Assistant'
+       '欢迎使用 AI Developer Assistant',
+       {
+        isWelcome: true
+       }
       )
     ]
+    conversation.updatedAt = new Date().toISOString()
   }
 
   // 设置loading状态
@@ -161,20 +240,29 @@ export const useChatStore = defineStore('chat', () => {
     loading.value = state
   }
 
-  // loading时的消息提示
-  const addLoadingMessage = () => {
-    addMessage(
-      createMessage('assistant', '', { loading: true })
-    )
+  // loading时的消息提示 1.默认是插入到消息末尾 => loading切换成AI回答的情况 2.在指定位置插入 重新生成的情况
+  const addLoadingMessage = (index?: number) => {
+
+    const message = createMessage('assistant', '', { loading: true })
+
+    if(index === undefined) {
+      addMessage(message)
+    } else {
+      insertMessage(index, message)
+    }
+
+    streamingMessageId.value = message.id
+
   }
 
   // 替换loading消息提示
   const replaceLoadingMessage = (content: string) => {
     const conversation = currentConversation.value
     if(!conversation) return
+    if(!streamingMessageId.value) return
 
-    // 相当于conversation.messages.findLast()，但是findLast需要较新的ES配置
-    const message = [...conversation.messages].reverse().find(item => item.loading)
+   
+    const message = conversation.messages.find(v => v.id === streamingMessageId.value)
 
     if(!message?.loading) return
 
@@ -182,6 +270,8 @@ export const useChatStore = defineStore('chat', () => {
     message.content = content
 
     conversation.updatedAt = new Date().toISOString()
+
+    streamingMessageId.value = null
   }
 
 
@@ -190,17 +280,22 @@ export const useChatStore = defineStore('chat', () => {
     conversations,
     currentConversation,
     currentConversationId,
+    streamingMessageId,
     initConversation,
     createConversation,
     switchConversation,
     deleteConversation,
     updateConversationTitle,
+    getPreviousUserMessage,
     addMessage,
+    insertMessage,
+    removeMessage,
     clearMessages,
     setLoading,
     addLoadingMessage,
     replaceLoadingMessage,
-    appendStreamingMessage
+    appendStreamingMessage,
+    finishStreamingMessage
   }
 
 })
