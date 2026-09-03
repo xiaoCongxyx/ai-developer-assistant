@@ -39,7 +39,10 @@ def build_messages(message: str, history: list[ChatMessage]) -> list[dict[str, s
 
 async def chat(message: str, history: list[ChatMessage]) -> str:
 
-  messages = build_messages(message, history)
+  messages = build_messages(
+    message, 
+    history,
+  )
 
   response = await client.chat.completions.create(
     model=settings.llm_model,
@@ -51,7 +54,10 @@ async def chat(message: str, history: list[ChatMessage]) -> str:
 
 async def chat_stream(message: str, history: list[ChatMessage]):
 
-  messages = build_messages(message, history)
+  messages = build_messages(
+    message, 
+    history,
+  )
 
   stream = await client.chat.completions.create(
     model=settings.llm_model,

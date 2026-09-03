@@ -6,7 +6,7 @@ import ChatWindow from '@/components/chat/ChatWindow.vue'
 import { useChatStore } from '@/stores/chat'
 import { createMessage } from '@/utils/chat'
 
-import { sendChatMessage, streamChatMessage } from '@/api/chat'
+import { streamChatMessage } from '@/api/chat'
 import { generateTitle } from '@/utils/conversation'
 
 const chatStore = useChatStore()
@@ -44,7 +44,7 @@ const generateAIResponse = async (content: string, loadingIndex?: number) => {
           role: v.role,
           content: v.content,
         })) ?? []
-
+    console.log(history, '=============')
     // 流式请求返回结果
     await streamChatMessage(
       { message: content, history },
@@ -96,6 +96,7 @@ const testStream = async () => {
   const res = await streamChatMessage(
     {
       message: '你好',
+      history: [],
     },
     (chunk) => {
       console.log(`收到 chunk：${chunk}`)
