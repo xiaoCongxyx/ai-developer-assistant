@@ -1,11 +1,21 @@
 import request from "@/utils/request"
 
+// 前端真正传给后端的消息，不需要携带 id、createdAt、loading 等 UI 信息。
+// 这些属于前端状态，而不是 LLM 对话数据。
+// 在 API 层定义了独立的 DTO，避免前后端数据模型强耦合。
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
 export interface ChatRequest {
+  // 当前用户正在发送的问题
   message: string
+  // 当前问题之前的历史消息
+  history: ChatMessage[]
 }
 
 export interface ChatResponse {
-  success: boolean,
+  success: boolean
   content: string
 }
 

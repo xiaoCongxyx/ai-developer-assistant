@@ -34,9 +34,20 @@ const generateAIResponse = async (content: string, loadingIndex?: number) => {
 
     abortController = new AbortController()
 
+    // 当前消息已经加入 Pinia，因此需要排除最后一条消息。
+    // 最后一条就是用户刚刚发送的问题。
+    const history =
+      chatStore.currentConversation?.messages
+        .filter((v) => !v.loading)
+        .slice(0, -1)
+        .map((v) => ({
+          role: v.role,
+          content: v.content,
+        })) ?? []
+
     // 流式请求返回结果
     await streamChatMessage(
-      { message: content },
+      { message: content, history },
       (chunk) => {
         chatStore.appendStreamingMessage(chunk)
       },

@@ -8,7 +8,7 @@ router = APIRouter()
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_api(request: ChatRequest):
-  content = await chat(request.message)
+  content = await chat(request.message, request.history)
 
   return ChatResponse(
     success=True,
@@ -19,6 +19,6 @@ async def chat_api(request: ChatRequest):
 async def chat_stream_api(request: ChatRequest):
 
   return StreamingResponse(
-    chat_stream(request.message),
+    chat_stream(request.message, request.history),
     media_type="text/plain",
   )
