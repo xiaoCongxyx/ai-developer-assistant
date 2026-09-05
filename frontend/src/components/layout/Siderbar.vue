@@ -1,13 +1,7 @@
 <script setup lang="ts">
-import {
-  ChatDotRound,
-  DocumentAdd,
-  Reading,
-  Platform,
-  Setting,
-} from '@element-plus/icons-vue'
+import { ChatDotRound, DocumentAdd, Reading, Platform, Setting } from '@element-plus/icons-vue'
 
-import ConversationList from '../sidebar/ConversationList.vue';
+import ConversationList from '../sidebar/ConversationList.vue'
 
 const menus = [
   {
@@ -40,27 +34,16 @@ const menus = [
 
 <template>
   <aside class="sidebar">
-    <div class="sidebar-logo">
-      🤖 Assistant
-    </div>
+    <div class="sidebar-logo">🤖 Assistant</div>
 
     <!-- 会话列表 -->
-    <ConversationList />
-
+    <ConversationList v-if="$route.path.startsWith('/chat')" />
 
     <!-- 功能菜单 -->
 
     <div class="menu-wrapper">
-      <el-menu
-        router
-        default-active="/chat"
-        class="menu"
-      >
-        <el-menu-item
-          v-for="item in menus"
-          :key="item.path"
-          :index="item.path"
-        >
+      <el-menu router default-active="/chat" class="menu">
+        <el-menu-item v-for="item in menus" :key="item.path" :index="item.path">
           <el-icon>
             <component :is="item.icon" />
           </el-icon>
@@ -94,9 +77,9 @@ const menus = [
   border-bottom: 1px solid var(--border-light);
 }
 
-.menu-wrapper{
-  margin-top:auto;
-  padding-bottom:20px;
+.menu-wrapper {
+  margin-top: auto;
+  padding-bottom: 20px;
 }
 
 :deep(.el-menu) {
