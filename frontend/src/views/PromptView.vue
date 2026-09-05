@@ -6,8 +6,7 @@ import { usePromptStore } from '@/stores/prompt'
 import PromptList from '@/components/prompt/PromptList.vue'
 import PromptFormDialog from '@/components/prompt/PromptFormDialog.vue'
 import type { Prompt } from '@/types/prompt'
-import { deletePrompt } from '@/api/prompt'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const promptStore = usePromptStore()
 
@@ -24,12 +23,33 @@ const handleEdit = (prompt: Prompt) => {
 }
 
 const handleDelete = async (prompt: Prompt) => {
+  if (prompt.is_default) {
+    ElMessage.warning('默认 Prompt 不能删除，请先设置其他 Prompt 为默认')
+    return
+  }
+
   try {
-    const res = await deletePrompt(prompt.id)
-    console.log(res, 'resresres')
+    await ElMessageBox.confirm(
+      `确定要删除 Prompt「${prompt.name}」吗？删除后无法恢复。`,
+      '删除 Prompt',
+      {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+
+    await promptStore.deletePrompt(prompt.id)
+
+    ElMessage.success('删除成功')
   } catch (error) {
-    console.error('删除失败', error)
-    ElMessage.error('删除 Prompt 失败')
+    // 用户点击取消时，不需要提示错误
+    if (error === 'cancel' || error === 'close') {
+      return
+    }
+
+    console.error('删除 Prompt 失败：', error)
+    ElMessage.error('Prompt 删除失败，请稍后重试')
   }
 }
 
