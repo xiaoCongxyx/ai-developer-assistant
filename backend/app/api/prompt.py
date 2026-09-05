@@ -110,6 +110,9 @@ def set_default_prompt_api(
   prompt_id: int,
   db: Session = Depends(get_db),
 ):
+  """
+  设置默认 Prompt
+  """
   prompt = get_prompt(db, prompt_id)
 
   if prompt is None:

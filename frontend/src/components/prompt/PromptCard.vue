@@ -7,10 +7,15 @@ defineProps<{
 
 const emit = defineEmits<{
   edit: []
+  delete: []
 }>()
 
-const handelEdit = () => {
+const handleEdit = () => {
   emit('edit')
+}
+
+const handleDelete = () => {
+  emit('delete')
 }
 </script>
 
@@ -30,9 +35,11 @@ const handelEdit = () => {
       </div>
 
       <div class="prompt-actions">
-        <el-button size="small" @click="handelEdit"> 编辑 </el-button>
+        <el-button size="small" @click="handleEdit"> 编辑 </el-button>
 
-        <el-button v-if="!prompt.is_default" size="small" type="danger" plain> 删除 </el-button>
+        <el-button v-if="!prompt.is_default" size="small" type="danger" plain @click="handleDelete">
+          删除
+        </el-button>
       </div>
     </div>
 

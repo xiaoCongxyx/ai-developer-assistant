@@ -19,3 +19,9 @@ export async function updatePrompt(promptId: number, data: UpdatePromptData) {
 
   return response
 }
+
+export async function deletePrompt(promptId: number) {
+  const response = await request.delete(`/prompts/${promptId}`)
+
+  return response
+}

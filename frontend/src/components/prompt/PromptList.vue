@@ -9,10 +9,15 @@ defineProps<{
 
 const emit = defineEmits<{
   edit: [prompt: Prompt]
+  delete: [prompt: Prompt]
 }>()
 
 const handleEdit = (prompt: Prompt) => {
   emit('edit', prompt)
+}
+
+const handleDelete = (prompt: Prompt) => {
+  emit('delete', prompt)
 }
 </script>
 
@@ -30,6 +35,7 @@ const handleEdit = (prompt: Prompt) => {
         :key="prompt.id"
         :prompt="prompt"
         @edit="handleEdit(prompt)"
+        @delete="handleDelete(prompt)"
       />
     </div>
   </div>

@@ -6,6 +6,8 @@ import { usePromptStore } from '@/stores/prompt'
 import PromptList from '@/components/prompt/PromptList.vue'
 import PromptFormDialog from '@/components/prompt/PromptFormDialog.vue'
 import type { Prompt } from '@/types/prompt'
+import { deletePrompt } from '@/api/prompt'
+import { ElMessage } from 'element-plus'
 
 const promptStore = usePromptStore()
 
@@ -15,10 +17,20 @@ const dialogVisible = ref(false)
 
 const editingPrompt = ref<Prompt | null>(null)
 
-const handelEdit = (prompt: Prompt) => {
+const handleEdit = (prompt: Prompt) => {
   console.log('当前编辑 Prompt：', prompt)
   editingPrompt.value = prompt
   dialogVisible.value = true
+}
+
+const handleDelete = async (prompt: Prompt) => {
+  try {
+    const res = await deletePrompt(prompt.id)
+    console.log(res, 'resresres')
+  } catch (error) {
+    console.error('删除失败', error)
+    ElMessage.error('删除 Prompt 失败')
+  }
 }
 
 const handleCreate = () => {
@@ -42,7 +54,7 @@ onMounted(() => {
       <el-button type="primary" @click="handleCreate"> 新建 Prompt </el-button>
     </div>
 
-    <PromptList :prompts="prompts" :loading="loading" @edit="handelEdit" />
+    <PromptList :prompts="prompts" :loading="loading" @edit="handleEdit" @delete="handleDelete" />
 
     <PromptFormDialog :prompt="editingPrompt" v-model="dialogVisible" />
   </div>
