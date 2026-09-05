@@ -1,6 +1,6 @@
 import request from "@/utils/request";
 
-import type { Prompt, CreatePromptData } from "@/types/prompt";
+import type { Prompt, CreatePromptData, UpdatePromptData } from "@/types/prompt";
 
 export async function getPrompts() {
   const response = await request.get<Prompt[], Prompt[]>('/prompts')
@@ -9,7 +9,13 @@ export async function getPrompts() {
 }
 
 export async function createPrompt(data: CreatePromptData) {
-  const response = await request.post<Prompt[], Prompt>('/prompts', data)
+  const response = await request.post<Prompt, Prompt>('/prompts', data)
+
+  return response
+}
+
+export async function updatePrompt(promptId: number, data: UpdatePromptData) {
+  const response = await request.put<Prompt, Prompt>(`/prompts/${promptId}`, data)
 
   return response
 }

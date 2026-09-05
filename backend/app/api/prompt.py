@@ -89,6 +89,9 @@ def update_prompt_api(
   data: PromptUpdate,
   db: Session = Depends(get_db),
 ):
+  """
+  更新 Prompt
+  """
   prompt = get_prompt(db, prompt_id)
 
   if prompt is None:

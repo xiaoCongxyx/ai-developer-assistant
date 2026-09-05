@@ -13,3 +13,9 @@ export interface CreatePromptData {
   description: string
   content: string
 }
+
+export interface UpdatePromptData {
+  name: string
+  description: string
+  content: string
+}

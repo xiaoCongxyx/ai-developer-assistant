@@ -44,7 +44,7 @@ onMounted(() => {
 
     <PromptList :prompts="prompts" :loading="loading" @edit="handelEdit" />
 
-    <PromptFormDialog v-model="dialogVisible" />
+    <PromptFormDialog :prompt="editingPrompt" v-model="dialogVisible" />
   </div>
 </template>
 

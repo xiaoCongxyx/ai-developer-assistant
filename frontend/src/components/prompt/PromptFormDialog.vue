@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { usePromptStore } from '@/stores/prompt'
+import type { Prompt } from '@/types/prompt'
 import type { FormRules, FormInstance } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { nextTick, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 
 const promptStore = usePromptStore()
 
@@ -10,11 +11,21 @@ const formRef = ref<FormInstance>()
 const submitting = ref(false)
 const visible = defineModel<boolean>()
 
+const props = defineProps<{
+  prompt?: Prompt | null
+}>()
+
 const form = reactive({
   name: '',
   description: '',
   content: '',
 })
+
+const isEditMode = computed(() => props.prompt !== null)
+
+const dialogTitle = computed(() => (isEditMode.value ? '编辑 Prompt' : '新建 Prompt'))
+
+const submitBtnText = computed(() => (isEditMode.value ? '保存修改' : '创建 Prompt'))
 
 const rules: FormRules = {
   name: [
@@ -48,6 +59,18 @@ const rules: FormRules = {
   ],
 }
 
+function fillForm(prompt: Prompt) {
+  form.name = prompt.name
+  form.description = prompt.description
+  form.content = prompt.content
+}
+
+function clearForm() {
+  form.name = ''
+  form.description = ''
+  form.content = ''
+}
+
 async function handleSubmit() {
   if (!formRef.value) return
 
@@ -67,49 +90,67 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
-    await promptStore.createPrompt({
-      name: form.name.trim(),
-      description: form.description.trim(),
-      content: form.content.trim(),
-    })
+    if (isEditMode.value && props.prompt) {
+      await promptStore.updatePrompt(props.prompt.id, {
+        name: form.name.trim(),
+        description: form.description.trim(),
+        content: form.content.trim(),
+      })
 
-    ElMessage.success('Prompt 创建成功')
+      ElMessage.success('Prompt 更新成功')
+    } else {
+      await promptStore.createPrompt({
+        name: form.name.trim(),
+        description: form.description.trim(),
+        content: form.content.trim(),
+      })
+
+      ElMessage.success('Prompt 创建成功')
+    }
     visible.value = false
-    submitting.value = false
   } catch (error) {
-    console.error('创建 Prompt 失败：', error)
+    console.error(isEditMode.value ? '修改 Prompt 失败：' : '创建 Prompt 失败：', error)
 
-    ElMessage.error('Prompt 创建失败')
+    ElMessage.error(
+      isEditMode.value ? 'Prompt 修改失败，请稍后重试' : 'Prompt 创建失败，请稍后重试',
+    )
   } finally {
     submitting.value = false
   }
 }
 
 function handleCancel() {
+  if (submitting.value) return
   visible.value = false
 }
 
 async function resetForm() {
   await nextTick()
 
-  formRef.value?.resetFields()
+  formRef.value?.clearValidate()
 
-  form.name = ''
-  form.description = ''
-  form.content = ''
+  if (props.prompt) {
+    fillForm(props.prompt)
+  } else {
+    clearForm()
+  }
 }
 
-watch(visible, (value) => {
-  if (value) {
-    resetForm()
-  }
-})
+watch(
+  () => [visible.value, props.prompt] as const,
+  ([isVisible]) => {
+    if (isVisible) {
+      resetForm()
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <el-dialog
     v-model="visible"
-    title="新建 Prompt"
+    :title="dialogTitle"
     width="640px"
     class="prompt-form-dialog"
     destroy-on-close
@@ -152,7 +193,7 @@ watch(visible, (value) => {
         <el-button :disabled="submitting" @click="handleCancel"> 取消 </el-button>
 
         <el-button type="primary" :loading="submitting" @click="handleSubmit">
-          创建 Prompt
+          {{ submitBtnText }}
         </el-button>
       </div>
     </template>
