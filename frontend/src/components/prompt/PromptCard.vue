@@ -4,6 +4,14 @@ import type { Prompt } from '@/types/prompt'
 defineProps<{
   prompt: Prompt
 }>()
+
+const emit = defineEmits<{
+  edit: []
+}>()
+
+const handelEdit = () => {
+  emit('edit')
+}
 </script>
 
 <template>
@@ -22,7 +30,7 @@ defineProps<{
       </div>
 
       <div class="prompt-actions">
-        <el-button size="small"> 编辑 </el-button>
+        <el-button size="small" @click="handelEdit"> 编辑 </el-button>
 
         <el-button v-if="!prompt.is_default" size="small" type="danger" plain> 删除 </el-button>
       </div>

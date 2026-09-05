@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { usePromptStore } from '@/stores/prompt'
+import type { FormRules, FormInstance } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { nextTick, reactive, ref, watch } from 'vue'
 
 const promptStore = usePromptStore()
 
+const formRef = ref<FormInstance>()
 const submitting = ref(false)
 const visible = defineModel<boolean>()
 
@@ -14,18 +16,56 @@ const form = reactive({
   content: '',
 })
 
+const rules: FormRules = {
+  name: [
+    {
+      required: true,
+      message: '请输入 Prompt 名称',
+      trigger: 'blur',
+    },
+    {
+      min: 1,
+      max: 100,
+      message: 'Prompt 名称长度应为 1-100 个字符',
+      trigger: 'blur',
+    },
+  ],
+
+  description: [
+    {
+      max: 500,
+      message: '描述不能超过 500 个字符',
+      trigger: 'blur',
+    },
+  ],
+
+  content: [
+    {
+      required: true,
+      message: '请输入 Prompt 内容',
+      trigger: 'blur',
+    },
+  ],
+}
+
 async function handleSubmit() {
+  if (!formRef.value) return
+
+  const vaild = formRef.value.validate().catch(() => false)
+
+  if (!vaild) return
+
   if (!form.name.trim()) {
-    ElMessage.warning('请输入 Prompt 名称')
+    ElMessage.warning('Prompt 名称不能为空')
     return
   }
+
   if (!form.content.trim()) {
-    ElMessage.warning('请输入 Prompt 内容')
+    ElMessage.warning('Prompt 内容不能为空')
     return
   }
 
   submitting.value = true
-
   try {
     await promptStore.createPrompt({
       name: form.name.trim(),
@@ -48,6 +88,22 @@ async function handleSubmit() {
 function handleCancel() {
   visible.value = false
 }
+
+async function resetForm() {
+  await nextTick()
+
+  formRef.value?.resetFields()
+
+  form.name = ''
+  form.description = ''
+  form.content = ''
+}
+
+watch(visible, (value) => {
+  if (value) {
+    resetForm()
+  }
+})
 </script>
 
 <template>
@@ -58,29 +114,28 @@ function handleCancel() {
     class="prompt-form-dialog"
     destroy-on-close
   >
-    <el-form :model="form" label-position="top" class="prompt-form">
-      <!-- 名称 -->
-      <el-form-item label="名称">
+    <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="prompt-form">
+      <el-form-item label="名称" prop="name">
         <el-input
           v-model="form.name"
           placeholder="例如：代码助手"
           maxlength="100"
           show-word-limit
+          clearable
         />
       </el-form-item>
 
-      <!-- 描述 -->
-      <el-form-item label="描述">
+      <el-form-item label="描述" prop="description">
         <el-input
           v-model="form.description"
           placeholder="简单描述这个 Prompt 的用途"
           maxlength="500"
           show-word-limit
+          clearable
         />
       </el-form-item>
 
-      <!-- Prompt 内容 -->
-      <el-form-item label="Prompt 内容">
+      <el-form-item label="Prompt 内容" prop="content">
         <el-input
           v-model="form.content"
           type="textarea"
@@ -94,7 +149,7 @@ function handleCancel() {
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleCancel"> 取消 </el-button>
+        <el-button :disabled="submitting" @click="handleCancel"> 取消 </el-button>
 
         <el-button type="primary" :loading="submitting" @click="handleSubmit">
           创建 Prompt
@@ -128,14 +183,10 @@ function handleCancel() {
 
 .prompt-content-input :deep(.el-textarea__inner) {
   min-height: 240px !important;
-
   padding: 12px;
-
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-
   font-size: 13px;
   line-height: 1.6;
-
   resize: vertical;
 }
 

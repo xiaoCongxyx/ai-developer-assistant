@@ -6,6 +6,14 @@ defineProps<{
   prompts: Prompt[]
   loading: boolean
 }>()
+
+const emit = defineEmits<{
+  edit: [prompt: Prompt]
+}>()
+
+const handleEdit = (prompt: Prompt) => {
+  emit('edit', prompt)
+}
 </script>
 
 <template>
@@ -17,7 +25,12 @@ defineProps<{
     <el-empty v-else-if="prompts.length === 0" description="暂无 Prompt" />
 
     <div v-else class="prompt-items">
-      <PromptCard v-for="prompt in prompts" :key="prompt.id" :prompt="prompt" />
+      <PromptCard
+        v-for="prompt in prompts"
+        :key="prompt.id"
+        :prompt="prompt"
+        @edit="handleEdit(prompt)"
+      />
     </div>
   </div>
 </template>
