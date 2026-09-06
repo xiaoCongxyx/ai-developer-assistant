@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.chat import router as chat_router
 from app.api.prompt import router as prompt_router
+from app.api.knowledge_base import router as knowledge_base_router
+
 from app.core.database_init import init_database
 
 app = FastAPI(
@@ -24,3 +26,4 @@ app.add_middleware(
 # 注册api路由
 app.include_router(chat_router)
 app.include_router(prompt_router)
+app.include_router(knowledge_base_router)
