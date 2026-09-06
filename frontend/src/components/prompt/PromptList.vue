@@ -10,6 +10,7 @@ defineProps<{
 const emit = defineEmits<{
   edit: [prompt: Prompt]
   delete: [prompt: Prompt]
+  setDefault: [prompt: Prompt]
 }>()
 
 const handleEdit = (prompt: Prompt) => {
@@ -18,6 +19,10 @@ const handleEdit = (prompt: Prompt) => {
 
 const handleDelete = (prompt: Prompt) => {
   emit('delete', prompt)
+}
+
+const handleSetDefault = (prompt: Prompt) => {
+  emit('setDefault', prompt)
 }
 </script>
 
@@ -36,6 +41,7 @@ const handleDelete = (prompt: Prompt) => {
         :prompt="prompt"
         @edit="handleEdit(prompt)"
         @delete="handleDelete(prompt)"
+        @set-default="handleSetDefault(prompt)"
       />
     </div>
   </div>

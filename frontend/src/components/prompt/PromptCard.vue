@@ -8,6 +8,7 @@ defineProps<{
 const emit = defineEmits<{
   edit: []
   delete: []
+  setDefault: []
 }>()
 
 const handleEdit = () => {
@@ -16,6 +17,10 @@ const handleEdit = () => {
 
 const handleDelete = () => {
   emit('delete')
+}
+
+const handleSetDefault = () => {
+  emit('setDefault')
 }
 </script>
 
@@ -39,6 +44,9 @@ const handleDelete = () => {
 
         <el-button v-if="!prompt.is_default" size="small" type="danger" plain @click="handleDelete">
           删除
+        </el-button>
+        <el-button v-if="!prompt.is_default" type="primary" link @click="handleSetDefault">
+          设为默认
         </el-button>
       </div>
     </div>

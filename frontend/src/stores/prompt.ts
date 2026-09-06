@@ -2,7 +2,13 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 
 import type { CreatePromptData, Prompt, UpdatePromptData } from "@/types/prompt";
-import { getPrompts, createPrompt as createPromptApi, updatePrompt as updatePromptApi, deletePrompt as deletePromptApi } from "@/api/prompt";
+import { 
+  getPrompts, 
+  createPrompt as createPromptApi, 
+  updatePrompt as updatePromptApi, 
+  deletePrompt as deletePromptApi, 
+  setDefaultPrompt as setDefaultPromptApi 
+} from "@/api/prompt";
 
 export const usePromptStore = defineStore('prompt', () => {
   // Prompt 列表
@@ -58,12 +64,24 @@ export const usePromptStore = defineStore('prompt', () => {
 
   }
 
+  // 设置默认 Prompt
+  const setDefaultPrompt = async (promptId: number) => {
+    const prompt = await setDefaultPromptApi(promptId)
+
+    prompts.value.forEach(v => {
+      v.is_default = v.id === prompt.id
+    })
+
+    return prompt
+  }
+
   return {
     prompts,
     loading,
     fetchPrompts,
     createPrompt,
     updatePrompt,
-    deletePrompt
+    deletePrompt,
+    setDefaultPrompt
   }
 })

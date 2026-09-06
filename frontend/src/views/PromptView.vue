@@ -53,6 +53,18 @@ const handleDelete = async (prompt: Prompt) => {
   }
 }
 
+const handleSetDefault = async (prompt: Prompt) => {
+  if (prompt.is_default) return
+
+  try {
+    await promptStore.setDefaultPrompt(prompt.id)
+    ElMessage.success(`「${prompt.name}」已设为默认 Prompt`)
+  } catch (error) {
+    console.error('设置默认 Prompt 失败：', error)
+    ElMessage.error('设置默认 Prompt 失败，请稍后重试')
+  }
+}
+
 const handleCreate = () => {
   editingPrompt.value = null
   dialogVisible.value = true
@@ -74,7 +86,13 @@ onMounted(() => {
       <el-button type="primary" @click="handleCreate"> 新建 Prompt </el-button>
     </div>
 
-    <PromptList :prompts="prompts" :loading="loading" @edit="handleEdit" @delete="handleDelete" />
+    <PromptList
+      :prompts="prompts"
+      :loading="loading"
+      @edit="handleEdit"
+      @delete="handleDelete"
+      @set-default="handleSetDefault"
+    />
 
     <PromptFormDialog :prompt="editingPrompt" v-model="dialogVisible" />
   </div>
