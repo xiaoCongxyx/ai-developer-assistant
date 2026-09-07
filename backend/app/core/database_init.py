@@ -6,6 +6,7 @@ from app.models.prompt import Base,Prompt
 
 # Python 执行 import 时，会执行 KnowledgeBase 类定义  于是它才会注册到 Base.metadata 才会创建 knowledge_bases 表
 from app.models.knowledge_base import KnowledgeBase
+from app.models.document import Document
 
 def init_database():
   """
