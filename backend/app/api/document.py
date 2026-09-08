@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
@@ -15,6 +15,13 @@ from app.services.document import (
     get_documents,
     update_document,
 )
+from app.core.file import (
+    MAX_FILE_SIZE,
+    validate_file_extension,
+    validate_file_size,
+)
+
+from app.services.file_storage import save_upload_file
 
 router = APIRouter(
     prefix="/knowledge-bases/{knowledge_base_id}/documents",
@@ -140,3 +147,109 @@ def delete_document_api(knowledge_base_id: int, document_id: int, db: Session = 
     delete_document(db, document)
 
     return None
+
+@router.post(
+    "/upload",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_document_api(knowledge_base_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """
+    UploadFile 是 FastAPI 处理文件上传的核心类型。
+    File(...) 表示：
+    这个参数来自 multipart/form-data。
+    """
+
+    # filename 来自客户端。
+    #
+    # 这里只把它当作“原始文件名”。
+    # 最终保存文件名由后端生成。
+    original_filename = file.filename or ""
+
+    if not original_filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="文件名不能为空",
+        )
+
+    # =========================
+    # 1. 文件类型校验
+    # =========================
+
+    try:
+        validate_file_extension(original_filename)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+
+    # =========================
+    # 2. 保存文件
+    # =========================
+
+    try:
+        file_path, file_size = await save_upload_file(file, MAX_FILE_SIZE)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="文件保存失败",
+        )
+
+    # =========================
+    # 3. 文件大小校验
+    # =========================
+
+    try:
+        validate_file_size(file_size)
+    except ValueError as exc:
+        # 文件已经保存，但是发现超过大小限制。
+        #
+        # 不能直接返回错误。
+        # 必须删除已经保存的文件。
+        #
+        # 这就是我们前面讨论的：
+        # “文件系统和数据库一致性问题”。
+
+        storage_path = Path(file_path)
+
+        if storage_path.exists():
+            storage_path.unlink()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    
+    # =========================
+    # 4. 创建 Document
+    # =========================
+
+    document = DocumentCreate(
+      knowledge_base_id=knowledge_base_id, 
+      name=original_filename, 
+      file_type=Path(original_filename)
+      .suffix
+      .lower()
+      .lstrip("."),
+      file_path=file_path,
+      file_size=file_size
+    )
+
+    try:
+        return create_document(db, data=document)
+    except Exception:
+        # 如果数据库创建失败，
+        # 已经保存到磁盘的文件也必须删除。
+        #
+        # 否则会产生“孤儿文件”。
+
+        storage_path = Path(file_path)
+
+        if storage_path.exists():
+            storage_path.unlink()
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Document 创建失败",
+        )
