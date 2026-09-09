@@ -18,6 +18,25 @@ def get_document_chunk(db:Session, document_id: int) -> list[DocumentChunk]:
 
     return list(result.scalars().all())
 
+def get_document_chunks_by_ids(
+    db: Session,
+    chunk_ids: list[int]
+) -> list[DocumentChunk]:
+    """
+    根据多个 Chunk ID 批量查询 Chunk。
+    """
+
+    if not chunk_ids:
+        return []
+
+    chunks = (
+        db.query(DocumentChunk)
+        .filter(DocumentChunk.id.in_(chunk_ids))
+        .all()
+    )
+
+    return chunks
+
 def delete_document_chunks(db: Session, document_id: int) -> None:
     """
     删除一个 Document 的所有 Chunk。
@@ -35,7 +54,12 @@ def create_document_chunks(db: Session, document_id: int, chunks: list[str]) -> 
     """
 
     document_chunks = [
-        DocumentChunk(document_id=document_id, chunk_index=index, content=content, content_length=len(content))
+        DocumentChunk(
+            document_id=document_id, 
+            chunk_index=index, 
+            content=content, 
+            content_length=len(content)
+        )
         for index,content in enumerate(chunks)
     ]
 
@@ -43,5 +67,5 @@ def create_document_chunks(db: Session, document_id: int, chunks: list[str]) -> 
         return []
 
     db.add_all(document_chunks)
-
+    # db.flush()  # 立刻生成自增 id，不等到 commit
     return document_chunks

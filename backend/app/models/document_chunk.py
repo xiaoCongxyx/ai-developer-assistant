@@ -5,7 +5,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.prompt import Base
 
-def DocumentChunk(Base):
+
+class DocumentChunk(Base):
+    """
+    Document 的文本 Chunk。
+    """
+
     __tablename__ = "document_chunks"
 
     id: Mapped[int] = mapped_column(
