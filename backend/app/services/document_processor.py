@@ -21,11 +21,25 @@ from app.services.file_storage import get_storage_path
 from app.services.document_chunk_processor import (
     process_document_chunks
 )
+from app.services.document_indexer import DocumentIndexer
 
-def process_document(db: Session, document: Document) -> None:
+async def process_document(db: Session, document: Document, document_indexer: DocumentIndexer) -> None:
     """
     文档处理总调度：解析 → 存原文 → 分块 → 入库 → 更新状态
     核心业务：同事务、原子性、失败回滚
+
+    文档完整处理流程。
+    Document
+        ↓
+    Parse
+        ↓
+    DocumentContent
+        ↓
+    Chunking
+        ↓
+    Embedding
+        ↓
+    Qdrant
     """
     # Processor 负责协调：
     #
@@ -67,9 +81,13 @@ def process_document(db: Session, document: Document) -> None:
         else:
             update_document_content(db, document_content, text)
 
-        process_document_chunks(db, document)
+        # 文本 → Chunk
+        document_chunks = process_document_chunks(db, document)
 
-        # 5. 修改状态为 completed
+        # Chunk → Embedding → Qdrant
+        await document_indexer.index_chunks(document_chunks)
+
+        # 5. 修改状态为 completed 只有整个 Pipeline 成功才标记 completed
         document.status = DOCUMENT_STATUS_COMPLETED
         document.error_message = ""
 

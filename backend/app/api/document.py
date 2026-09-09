@@ -208,7 +208,6 @@ async def upload_document_api(knowledge_base_id: int, file: UploadFile = File(..
         # 不能直接返回错误。
         # 必须删除已经保存的文件。
         #
-        # 这就是我们前面讨论的：
         # “文件系统和数据库一致性问题”。
 
         storage_path = Path(file_path)
