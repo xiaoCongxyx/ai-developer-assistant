@@ -1,5 +1,5 @@
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointStruct, VectorParams
 
 from app.providers.vector_store import VectorStore
 
@@ -60,7 +60,13 @@ class QdrantVectorStore(VectorStore):
             points=qdrant_points
         )
 
-    async def search(self, collection_name: str, query_vector: list[float], limit: int = 5) -> list[dict]:
+    async def search(
+      self, 
+      collection_name: str, 
+      query_vector: list[float], 
+      limit: int = 5,
+      knowledge_base_id: int | None = None
+    ) -> list[dict]:
         """
         相似度检索，返回 Top-limit 最相关结果。
         返回格式：[{"id": "...", "score": 相似度, document_id, content...}]
@@ -73,9 +79,24 @@ class QdrantVectorStore(VectorStore):
         if limit <= 0:
             raise ValueError("limit 必须大于 0")
 
+        query_filter = None
+
+        if knowledge_base_id is not None:
+            query_filter = Filter(
+                must=[
+                    FieldCondition(
+                        key="knowledge_base_id",
+                        match=MatchValue(
+                            value=knowledge_base_id
+                        )
+                    )
+                ]
+            )
+
         results = await self.client.query_points(
             collection_name=collection_name,
             query=query_vector,
+            query_filter=query_filter,
             limit=limit,
             with_payload=True
         )

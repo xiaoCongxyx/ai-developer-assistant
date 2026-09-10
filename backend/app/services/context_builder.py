@@ -19,15 +19,23 @@ class ContextBuilder:
         max_chunks: int = 5,
         min_score: float = 0.0
     ) -> RAGContext:
+        """
+        构建 RAG 上下文。
+        
+        参数：
+            query: 用户原始问题
+            chunks: 检索结果（需按相似度降序排列）
+            max_chunks: 最多保留几条资料
+            min_score: 最低相似度阈值，建议 0.55~0.65
+        """
 
         # Query 去掉首尾空格
         query = query.strip()
-
         if not query:
             return RAGContext(
-              query="",
-              contexts=[],
-              context_text=""
+                query="",
+                contexts=[],
+                context_text=""
             )
 
         # 过滤低相似度结果
@@ -42,10 +50,10 @@ class ContextBuilder:
 
         contexts = [
             RetrievedContext(
-              content=chunk.content,
-              score=chunk.score,
-              chunk_id=chunk.chunk_id,
-              document_id=chunk.document_id
+                content=chunk.content,
+                score=chunk.score,
+                chunk_id=chunk.chunk_id,
+                document_id=chunk.document_id
             )
             for chunk in selected_chunks
         ]
@@ -62,7 +70,7 @@ class ContextBuilder:
         context_text = "\n\n".join(context_parts)
 
         return RAGContext(
-          query=query,
-          contexts=contexts,
-          context_text=context_text
+            query=query,
+            contexts=contexts,
+            context_text=context_text
         )

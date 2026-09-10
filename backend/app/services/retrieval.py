@@ -34,7 +34,7 @@ class RetrievalService:
         self.embedding_service = embedding_service
         self.vector_store_service = vector_store_service
 
-    async def search(self, db: Session, query: str, limit: int = 5):
+    async def search(self, db: Session, query: str, limit: int = 5, knowledge_base_id: int | None = None) -> list[RetrievedChunk]:
         """
         检索相关文档片段
         
@@ -64,7 +64,8 @@ class RetrievalService:
         vector_results = await self.vector_store_service.search(
             collection_name=COLLECTION_NAME,
             query_vector=query_vector,
-            limit=limit
+            limit=limit,
+            knowledge_base_id=knowledge_base_id
         )
 
         if not vector_results:

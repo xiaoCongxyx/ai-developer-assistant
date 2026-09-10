@@ -24,7 +24,8 @@ class VectorStoreService:
         self,
         collection_name: str,
         query_vector: list[float],
-        limit: int = 5
+        limit: int = 5,
+        knowledge_base_id: int | None = None
     ) -> list[dict]:
         if not query_vector:
             return []
@@ -33,7 +34,8 @@ class VectorStoreService:
           return await self.vector_store.search(
               collection_name=collection_name,
               query_vector=query_vector,
-              limit=limit
+              limit=limit,
+              knowledge_base_id=knowledge_base_id
           )
         except Exception as e:
             return []  # 检索失败不抛错，RAG 降级回答

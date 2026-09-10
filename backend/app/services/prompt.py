@@ -52,6 +52,17 @@ def get_prompt(db: Session, prompt_id: int) -> Prompt | None:
 
   return result.scalar_one_or_none()
 
+def get_default_prompt(db: Session) -> Prompt | None:
+    """
+    获取当前默认 Prompt。
+    """
+    result = db.execute(
+        select(Prompt).where(
+            Prompt.is_default.is_(True)
+        )
+    )
+    return result.scalar_one_or_none()
+
 def update_prompt(
   db: Session,
   prompt: Prompt,

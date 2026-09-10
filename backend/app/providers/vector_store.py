@@ -36,11 +36,12 @@ class VectorStore(ABC):
         self,
         collection_name: str,
         query_vector: list[float],
-        limit: int=5
+        limit: int=5,
+        knowledge_base_id: int | None = None
     ) -> list[dict]:
         """
         根据向量进行相似度搜索。
-        
+
         query_vector: 问题转向量
         limit: 返回最相似前 N 条
         返回: 【文档+相似度分数】列表

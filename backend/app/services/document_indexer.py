@@ -28,7 +28,7 @@ class DocumentIndexer:
         self.embedding_service = embedding_service
         self.vector_store_service = vector_store_service
 
-    async def index_chunks(self, chunks: list) -> None:
+    async def index_chunks(self, chunks: list, knowledge_base_id: int) -> None:
         """
         批量索引文档片段：文本 → 向量 → 入库
         
@@ -65,7 +65,8 @@ class DocumentIndexer:
                     "vector": embedding,
                     "payload": {
                         "document_id": chunk.document_id,
-                        "chunk_index": chunk.chunk_index
+                        "chunk_index": chunk.chunk_index,
+                        "knowledge_base_id": knowledge_base_id
                     }
                 }
             )
