@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.providers.llm import chat
+from app.providers.llm import chat, chat_stream
 from app.prompts.default import DEFAULT_SYSTEM_PROMPT
 from app.schemas.chat import ChatMessage
 from app.services.context_builder import ContextBuilder
@@ -81,3 +81,37 @@ class ChatService:
         # 第四步：将已经构建好的 messages
         # 交给 LLM Provider。
         return await chat(messages)
+
+    async def chat_stream(
+        self,
+        db: Session,
+        message: str,
+        history: list[ChatMessage],
+        knowledge_base_id: int | None = None,
+    ):
+        retrieval_chunks = await self.retrieval_service.search(
+            db,
+            query=message,
+            limit=5,
+            knowledge_base_id=knowledge_base_id
+        )
+
+        rag_context = self.context_builder.build(
+            query=message,
+            chunks=retrieval_chunks,
+            max_chunks=5,
+            min_score=0.55
+        )
+
+        default_prompt = get_default_prompt(db)
+        if default_prompt is None:
+            raise ValueError("默认 Prompt 不存在")
+
+        messages = self.prompt_builder.build_rag_messages(
+            system_prompt=default_prompt.content,
+            history=history,
+            rag_context=rag_context
+        )
+
+        async for chunk in chat_stream(messages):
+            yield chunk
