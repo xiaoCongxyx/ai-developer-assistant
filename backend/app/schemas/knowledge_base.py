@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 
 class KnowledgeBaseCreate(BaseModel):
@@ -12,5 +13,5 @@ class KnowledgeBaseResponse(BaseModel):
     id: int
     name: str
     description: str = ""
-    create_at: str
-    update_at: str
+    created_at: datetime
+    updated_at: datetime

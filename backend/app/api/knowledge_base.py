@@ -27,7 +27,7 @@ def create_knowledge_base_api(data: KnowledgeBaseCreate, db: Session = Depends(g
     创建 knowledgeBase
     """
 
-    return create_knowledge_base(data, db)
+    return create_knowledge_base(db, data)
 
 @router.get(
     "",

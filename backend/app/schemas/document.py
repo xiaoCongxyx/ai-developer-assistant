@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 
 class DocumentCreate(BaseModel):
@@ -34,5 +35,5 @@ class DocumentResponse(BaseModel):
 
     error_message: str
 
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime

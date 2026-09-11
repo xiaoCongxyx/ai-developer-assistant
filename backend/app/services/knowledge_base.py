@@ -27,9 +27,9 @@ def get_knowledge_bases(db: Session):
     """
     
     result = db.execute(
-      select(KnowledgeBase).order_by(
-        KnowledgeBase.created_at.desc()
-      )
+        select(KnowledgeBase).order_by(
+            KnowledgeBase.created_at.desc()
+        )
     )
 
     return list(result.scalars().all())
@@ -40,9 +40,9 @@ def get_knowledge_base(db: Session, knowledge_base_id: int) -> KnowledgeBase | N
     """
 
     result = db.execute(
-      select().where(
-        KnowledgeBase.id == knowledge_base_id
-      )
+        select(KnowledgeBase).where(
+            KnowledgeBase.id == knowledge_base_id
+        )
     )
 
     return result.scalar_one_or_none()
