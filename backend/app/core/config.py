@@ -8,6 +8,9 @@ class Settings(BaseSettings):
 
     embedding_model: str
 
+    QDRANT_HOST: str = "localhost"
+    QDRANT_PORT: int = 6333
+
     class Config:
         env_file = ".env"
 

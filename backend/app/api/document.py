@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Path, status, UploadFile, File
+import logging
+from pathlib import Path
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
@@ -21,12 +23,81 @@ from app.core.file import (
     validate_file_size,
 )
 
-from app.services.file_storage import save_upload_file
+from app.services.file_storage import get_storage_path, save_upload_file
+from app.services.document_indexer import DocumentIndexer
+from app.providers.qdrant_vector_store import QdrantVectorStore
+from app.providers.siliconflow_embedding import SiliconFlowEmbeddingProvider
+from app.services.embedding import EmbeddingService
+from app.services.vector_store import VectorStoreService
+from app.services.document_processor import process_document
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/knowledge-bases/{knowledge_base_id}/documents",
     tags=["Document"],
 )
+
+# ==================== 依赖注入：单例模式 ====================
+# 全局一次性初始化，避免每次请求重建客户端
+def _build_indexer() -> DocumentIndexer:
+    """组装全套索引基础设施：仅执行一次"""
+    embedding_provider = SiliconFlowEmbeddingProvider()
+    embedding_service = EmbeddingService(embedding_provider)
+    vector_store = QdrantVectorStore(
+        host=settings.QDRANT_HOST,
+        port=settings.QDRANT_PORT
+    )
+    vector_store_service = VectorStoreService(vector_store)
+    return DocumentIndexer(embedding_service, vector_store_service)
+
+# 懒加载单例
+_indexer_instance: DocumentIndexer | None = None
+def get_document_indexer() -> DocumentIndexer:
+    """首次调用初始化，后续直接复用"""
+    global _indexer_instance
+    if _indexer_instance is None:
+        _indexer_instance = _build_indexer()
+    return _indexer_instance
+
+# ==================== 辅助工具函数 ====================
+def _cleanup_file(file_path: str) -> None:
+    """辅助清理：静默删除，不抛异常"""
+    try:
+        storage_path = get_storage_path(file_path)
+        if storage_path.exists():
+            storage_path.unlink()
+    except Exception:
+        logger.warning(f"清理文件失败: {file_path}", exc_info=True)
+
+def get_db():
+    """每个请求独立数据库会话，用完自动关闭"""
+    db = SessionLocal()
+
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+"""
+def get_document_indexer() -> DocumentIndexer:
+    # 负责组装文档索引所需的基础设施。
+    embedding_provider = SiliconFlowEmbeddingProvider()
+
+    embedding_service = EmbeddingService(embedding_provider)
+
+    vector_store = QdrantVectorStore(
+        host="localhost",
+        port=6333
+    )
+
+    vector_store_service = VectorStoreService(vector_store)
+
+    return DocumentIndexer(embedding_service, vector_store_service)
+"""
+
 
 # FastAPI 的 Depends 用来处理依赖注入。
 #
@@ -43,13 +114,6 @@ router = APIRouter(
 # 当前用户
 # 等等。
 
-def get_db():
-    db = SessionLocal()
-
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.post(
     "",
@@ -153,8 +217,16 @@ def delete_document_api(knowledge_base_id: int, document_id: int, db: Session = 
     response_model=DocumentResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def upload_document_api(knowledge_base_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_document_api(
+    knowledge_base_id: int, 
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db), 
+    indexer: DocumentIndexer = Depends(get_document_indexer)
+):
     """
+    上传文档并触发解析→分块→向量化→索引
+    任何一步失败自动清理已写入文件，保证一致性
+
     UploadFile 是 FastAPI 处理文件上传的核心类型。
     File(...) 表示：
     这个参数来自 multipart/form-data。
@@ -210,10 +282,7 @@ async def upload_document_api(knowledge_base_id: int, file: UploadFile = File(..
         #
         # “文件系统和数据库一致性问题”。
 
-        storage_path = Path(file_path)
-
-        if storage_path.exists():
-            storage_path.unlink()
+        _cleanup_file(file_path)
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -225,29 +294,31 @@ async def upload_document_api(knowledge_base_id: int, file: UploadFile = File(..
     # =========================
 
     document = DocumentCreate(
-      knowledge_base_id=knowledge_base_id, 
-      name=original_filename, 
-      file_type=Path(original_filename)
-      .suffix
-      .lower()
-      .lstrip("."),
-      file_path=file_path,
-      file_size=file_size
+        knowledge_base_id=knowledge_base_id, 
+        name=original_filename, 
+        file_type=Path(original_filename).suffix.lower().lstrip("."),
+        file_path=file_path,
+        file_size=file_size
     )
 
     try:
-        return create_document(db, data=document)
+        document = create_document(db, data=document)
+
+        await process_document(db, document, indexer)
+
+        db.refresh(document)
+
+        return document
     except Exception:
         # 如果数据库创建失败，
         # 已经保存到磁盘的文件也必须删除。
         #
         # 否则会产生“孤儿文件”。
 
-        storage_path = Path(file_path)
+        _cleanup_file(file_path)
 
-        if storage_path.exists():
-            storage_path.unlink()
-
+        import traceback
+        logger.error("Document 创建失败详情:\n%s", traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Document 创建失败",

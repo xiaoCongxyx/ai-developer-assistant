@@ -1,7 +1,11 @@
 from pathlib import Path
+from fastapi import UploadFile
 from uuid import uuid4
 
-from fastapi import UploadFile
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 文件实际存储目录。
 #
@@ -16,11 +20,13 @@ from fastapi import UploadFile
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
-DOCUMENT_STORSGE_DIR = BASE_DIR / "storage" / "documents"
+DOCUMENT_STORAGE_DIR = BASE_DIR / "storage" / "documents"
+
+
 
 # 程序启动/第一次保存文件时，
 # 如果目录不存在就自动创建。
-DOCUMENT_STORSGE_DIR.mkdir(
+DOCUMENT_STORAGE_DIR.mkdir(
   parents=True,
   exist_ok=True
 )
@@ -34,7 +40,7 @@ def generate_storage_filename(original_filename: str) -> str:
     suffix = Path(original_filename).suffix.lower()
 
     # 生成唯一文件名
-    filename = f"{uuid4().hex()}{suffix}"
+    filename = f"{uuid4().hex}{suffix}"
 
     return filename
 
@@ -56,7 +62,9 @@ async def save_upload_file(file: UploadFile, max_size: int) -> tuple[str, int]:
 
     storage_filename = generate_storage_filename(original_filename)
 
-    storage_path = DOCUMENT_STORSGE_DIR / storage_filename
+    storage_path = DOCUMENT_STORAGE_DIR / storage_filename
+
+    logger.debug(f"开始保存文件: {original_filename} → {storage_filename}")
 
     file_size = 0
 
@@ -92,6 +100,7 @@ async def save_upload_file(file: UploadFile, max_size: int) -> tuple[str, int]:
     relative_path = str(
       Path("storage") / "documents" / storage_filename
     )
+    relative_path = f"storage/documents/{storage_filename}"
 
     return relative_path, file_size
 
