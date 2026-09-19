@@ -11,6 +11,9 @@ import './assets/styles/markdown.css'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 
+import 'element-plus/theme-chalk/dark/css-vars.css' // 引入 EP 暗色基础变量
+import '@/assets/styles/theme.css' // 你的自定义主题变量，放后面覆盖
+
 
 import App from './App.vue'
 import router from './router'

@@ -78,11 +78,10 @@ onMounted(() => {
 <template>
   <div class="prompt-view">
     <div class="page-header">
-      <div>
+      <div class="header-left">
         <h2>Prompt 管理</h2>
         <p>管理 AI Assistant 使用的系统 Prompt</p>
       </div>
-
       <el-button type="primary" @click="handleCreate"> 新建 Prompt </el-button>
     </div>
 
@@ -101,26 +100,44 @@ onMounted(() => {
 <style scoped>
 .prompt-view {
   height: 100%;
-  padding: 24px;
+  padding: 24px 28px;
   box-sizing: border-box;
   overflow-y: auto;
+  background: var(--el-bg-color-page);
 }
 
+/* 页面头部 */
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
-.page-header h2 {
-  margin: 0 0 8px;
-  font-size: 22px;
+.header-left h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
 }
 
-.page-header p {
+.header-left p {
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--el-text-color-secondary);
   font-size: 14px;
+}
+
+/* 滚动条适配明暗 */
+.prompt-view::-webkit-scrollbar {
+  width: 6px;
+}
+.prompt-view::-webkit-scrollbar-thumb {
+  background: var(--el-border-color-darker);
+  border-radius: 3px;
+}
+.prompt-view::-webkit-scrollbar-track {
+  background: transparent;
 }
 </style>

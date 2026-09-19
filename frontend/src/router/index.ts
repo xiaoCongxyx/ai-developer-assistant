@@ -29,7 +29,15 @@ const router = createRouter({
         {
           path: 'knowledge',
           name: 'Knowledge',
-          component: () => import('@/views/KnowledgeView.vue')
+          component: () => import('@/views/KnowledgeView.vue'),
+          children:[
+            {
+              path: ':id',
+              name: 'KnowledgeDetail',
+              component: () => import('@/views/KnowledgeDetail.vue'),
+              props: true
+            }
+          ]
         },
 
         {

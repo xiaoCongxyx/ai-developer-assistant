@@ -124,6 +124,8 @@ onMounted(() => {
       :initial-data="formData"
       @submit="handleSubmit"
     />
+
+    <router-view />
   </div>
 </template>
 

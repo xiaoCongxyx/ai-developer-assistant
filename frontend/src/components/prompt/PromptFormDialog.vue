@@ -6,7 +6,6 @@ import { ElMessage } from 'element-plus'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 
 const promptStore = usePromptStore()
-
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
 const visible = defineModel<boolean>()
@@ -22,126 +21,101 @@ const form = reactive({
 })
 
 const isEditMode = computed(() => props.prompt !== null)
-
 const dialogTitle = computed(() => (isEditMode.value ? '编辑 Prompt' : '新建 Prompt'))
-
 const submitBtnText = computed(() => (isEditMode.value ? '保存修改' : '创建 Prompt'))
 
+// ✅ 完整验证规则（含去空格校验）
 const rules: FormRules = {
   name: [
+    { required: true, message: '请输入 Prompt 名称', trigger: 'blur' },
+    { min: 1, max: 100, message: '名称长度 1-100 字符', trigger: 'blur' },
     {
-      required: true,
-      message: '请输入 Prompt 名称',
-      trigger: 'blur',
-    },
-    {
-      min: 1,
-      max: 100,
-      message: 'Prompt 名称长度应为 1-100 个字符',
+      validator: (_, val: string) => !!val.trim(),
+      message: 'Prompt 名称不能为空',
       trigger: 'blur',
     },
   ],
-
-  description: [
-    {
-      max: 500,
-      message: '描述不能超过 500 个字符',
-      trigger: 'blur',
-    },
-  ],
-
+  description: [{ max: 500, message: '描述不能超过 500 字符', trigger: 'blur' }],
   content: [
+    { required: true, message: '请输入 Prompt 内容', trigger: 'blur' },
     {
-      required: true,
-      message: '请输入 Prompt 内容',
+      validator: (_, val: string) => !!val.trim(),
+      message: 'Prompt 内容不能为空',
       trigger: 'blur',
     },
   ],
 }
 
+// 回填表单
 function fillForm(prompt: Prompt) {
   form.name = prompt.name
   form.description = prompt.description
   form.content = prompt.content
 }
 
+// 清空表单
 function clearForm() {
   form.name = ''
   form.description = ''
   form.content = ''
 }
 
+// ✅ 修复：正确的异步验证流程
 async function handleSubmit() {
   if (!formRef.value) return
 
-  const vaild = formRef.value.validate().catch(() => false)
-
-  if (!vaild) return
-
-  if (!form.name.trim()) {
-    ElMessage.warning('Prompt 名称不能为空')
-    return
-  }
-
-  if (!form.content.trim()) {
-    ElMessage.warning('Prompt 内容不能为空')
-    return
+  // 1. 内置验证
+  try {
+    await formRef.value.validate()
+  } catch {
+    return // 验证失败，Element 已自动提示
   }
 
   submitting.value = true
   try {
-    if (isEditMode.value && props.prompt) {
-      await promptStore.updatePrompt(props.prompt.id, {
-        name: form.name.trim(),
-        description: form.description.trim(),
-        content: form.content.trim(),
-      })
+    // 2. 统一去首尾空格
+    const payload = {
+      name: form.name.trim(),
+      description: form.description.trim(),
+      content: form.content.trim(),
+    }
 
+    // 3. 分流：新建 / 编辑
+    if (isEditMode.value && props.prompt) {
+      await promptStore.updatePrompt(props.prompt.id, payload)
       ElMessage.success('Prompt 更新成功')
     } else {
-      await promptStore.createPrompt({
-        name: form.name.trim(),
-        description: form.description.trim(),
-        content: form.content.trim(),
-      })
-
+      await promptStore.createPrompt(payload)
       ElMessage.success('Prompt 创建成功')
     }
-    visible.value = false
-  } catch (error) {
-    console.error(isEditMode.value ? '修改 Prompt 失败：' : '创建 Prompt 失败：', error)
 
-    ElMessage.error(
-      isEditMode.value ? 'Prompt 修改失败，请稍后重试' : 'Prompt 创建失败，请稍后重试',
-    )
+    visible.value = false // 成功关闭弹窗
+  } catch (error) {
+    console.error(isEditMode.value ? '修改失败：' : '创建失败：', error)
+    ElMessage.error(isEditMode.value ? '修改失败，请稍后重试' : '创建失败，请稍后重试')
   } finally {
     submitting.value = false
   }
 }
 
+// 取消（提交中禁止取消）
 function handleCancel() {
   if (submitting.value) return
   visible.value = false
 }
 
+// 重置/回填
 async function resetForm() {
   await nextTick()
-
   formRef.value?.clearValidate()
-
-  if (props.prompt) {
-    fillForm(props.prompt)
-  } else {
-    clearForm()
-  }
+  props.prompt ? fillForm(props.prompt) : clearForm()
 }
 
+// 打开弹窗自动重置/回填
 watch(
-  () => [visible.value, props.prompt] as const,
+  [() => visible.value, () => props.prompt],
   ([isVisible]) => {
-    if (isVisible) {
-      resetForm()
-    }
+    if (isVisible) resetForm()
   },
   { immediate: true },
 )
@@ -190,8 +164,7 @@ watch(
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button :disabled="submitting" @click="handleCancel"> 取消 </el-button>
-
+        <el-button :disabled="submitting" @click="handleCancel">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="handleSubmit">
           {{ submitBtnText }}
         </el-button>
@@ -201,39 +174,50 @@ watch(
 </template>
 
 <style scoped>
+/* 表单整体间距 */
 .prompt-form {
-  padding-top: 8px;
+  padding-top: 4px;
 }
 
 .prompt-form :deep(.el-form-item) {
   margin-bottom: 20px;
 }
-
 .prompt-form :deep(.el-form-item:last-child) {
   margin-bottom: 0;
 }
 
+/* 标签样式 */
 .prompt-form :deep(.el-form-item__label) {
   margin-bottom: 8px;
   font-weight: 500;
+  color: var(--el-text-color-primary);
 }
 
+/* 输入框基础高度 */
 .prompt-form :deep(.el-input__wrapper) {
   min-height: 40px;
+  border-radius: 8px;
 }
 
+/* Prompt 正文编辑器 */
 .prompt-content-input :deep(.el-textarea__inner) {
-  min-height: 240px !important;
-  padding: 12px;
+  min-height: 240px;
+  padding: 14px 16px;
+  border-radius: 8px;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.7;
+  color: var(--el-text-color-regular);
+  background: var(--el-fill-color-light);
   resize: vertical;
+  transition: background 0.2s ease;
 }
 
+/* 底部按钮区 */
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 10px;
+  padding-top: 8px;
 }
 </style>

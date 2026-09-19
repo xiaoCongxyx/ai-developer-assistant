@@ -1,32 +1,46 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { ChatDotRound, DocumentAdd, Reading, Platform, Setting } from '@element-plus/icons-vue'
-
 import ConversationList from '../sidebar/ConversationList.vue'
+
+const route = useRoute()
+
+// ✅ 智能匹配：父级路径也高亮（/knowledge/1 → 高亮 /knowledge）
+const defaultActive = computed(() => {
+  const path = route.path
+  if (path.startsWith('/knowledge/')) return '/knowledge'
+  if (path.startsWith('/chat/')) return '/chat'
+  if (path.startsWith('/prompt/')) return '/prompt'
+  if (path.startsWith('/agent/')) return '/agent'
+  if (path.startsWith('/settings/')) return '/settings'
+  return path
+})
 
 const menus = [
   {
     path: '/chat',
-    title: 'Chat',
+    title: '对话聊天',
     icon: ChatDotRound,
   },
   {
     path: '/prompt',
-    title: 'Prompt',
+    title: '提示词管理',
     icon: DocumentAdd,
   },
   {
     path: '/knowledge',
-    title: 'Knowledge',
+    title: '知识库管理',
     icon: Reading,
   },
   {
     path: '/agent',
-    title: 'Agent',
+    title: '智能体',
     icon: Platform,
   },
   {
     path: '/settings',
-    title: 'Settings',
+    title: '系统设置',
     icon: Setting,
   },
 ]
@@ -34,26 +48,23 @@ const menus = [
 
 <template>
   <aside class="sidebar">
-    <div class="sidebar-logo">🤖 Assistant</div>
+    <!-- Logo 区域 -->
+    <div class="sidebar-logo">🤖 AI Assistant</div>
 
-    <!-- 会话列表 -->
-    <ConversationList v-if="$route.path.startsWith('/chat')" />
+    <!-- 会话列表：仅聊天页面显示 -->
+    <ConversationList v-if="route.path.startsWith('/chat')" />
 
     <!-- 功能菜单 -->
-
-    <div class="menu-wrapper">
-      <el-menu router default-active="/chat" class="menu">
+    <nav class="menu-wrapper">
+      <el-menu :default-active="defaultActive" router class="menu">
         <el-menu-item v-for="item in menus" :key="item.path" :index="item.path">
           <el-icon>
             <component :is="item.icon" />
           </el-icon>
-
-          <span>
-            {{ item.title }}
-          </span>
+          <span>{{ item.title }}</span>
         </el-menu-item>
       </el-menu>
-    </div>
+    </nav>
   </aside>
 </template>
 
@@ -71,15 +82,16 @@ const menus = [
   height: var(--header-height);
   display: flex;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 24px;
   font-size: 18px;
   font-weight: 600;
   border-bottom: 1px solid var(--border-light);
+  letter-spacing: 0.3px;
 }
 
 .menu-wrapper {
-  margin-top: auto;
-  padding-bottom: 20px;
+  flex: 1; /* ✅ 占满剩余空间，菜单靠上、不挤底部 */
+  padding: 16px 12px 24px;
 }
 
 :deep(.el-menu) {
@@ -89,13 +101,11 @@ const menus = [
 
 :deep(.el-menu-item) {
   height: 44px;
-  margin: 6px 12px;
-
+  margin: 4px 0;
+  padding: 0 16px !important;
   border-radius: var(--radius);
-
   color: var(--sidebar-text);
-
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 :deep(.el-menu-item:hover) {
@@ -109,8 +119,8 @@ const menus = [
   font-weight: 600;
 }
 
-:deep(.el-icon) {
+:deep(.el-menu-item .el-icon) {
   margin-right: 10px;
-  font-size: 16px;
+  font-size: 17px;
 }
 </style>

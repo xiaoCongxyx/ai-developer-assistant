@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import type { FormInstance, FormRules } from 'element-plus'
 import type { CreateKnowledgeBaseData, UpdateKnowledgeBaseData } from '@/types/knowledgeBase'
 
 interface Props {
@@ -12,10 +13,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  initialData: () => ({
-    name: '',
-    description: '',
-  }),
+  initialData: () => ({ name: '', description: '' }),
 })
 
 const emit = defineEmits<{
@@ -23,86 +21,71 @@ const emit = defineEmits<{
   submit: [data: CreateKnowledgeBaseData | UpdateKnowledgeBaseData]
 }>()
 
-// 📌 表单引用，用于调用 Element Plus Form 校验
-const formRef = ref()
-
-// 📌 防止用户重复提交
+// ✅ 补全类型、消除 TS 警告
+const formRef = ref<FormInstance>()
 const submitting = ref(false)
 
-// 📌 表单数据
+// 表单数据
 const form = reactive({
   name: '',
   description: '',
 })
 
-// 📌 根据当前模式动态显示标题
+// 动态标题与按钮文字
 const dialogTitle = computed(() => (props.isEdit ? '编辑知识库' : '新建知识库'))
+const submitText = computed(() => (props.isEdit ? '保存修改' : '创建知识库'))
 
-// 📌 表单校验规则
-const rules = {
+// ✅ 完整校验规则（含去空校验）
+const rules: FormRules = {
   name: [
+    { required: true, message: '请输入知识库名称', trigger: 'blur' },
+    { min: 1, max: 100, message: '名称长度 1-100 字符', trigger: 'blur' },
     {
-      required: true,
-      message: '请输入知识库名称',
-      trigger: 'blur',
-    },
-    {
-      min: 1,
-      max: 100,
-      message: '知识库名称长度应为 1-100 个字符',
+      validator: (_, val: string) => !!val.trim(),
+      message: '知识库名称不能为空',
       trigger: 'blur',
     },
   ],
-  description: [
-    {
-      max: 500,
-      message: '描述不能超过 500 个字符',
-      trigger: 'blur',
-    },
-  ],
+  description: [{ max: 500, message: '描述不能超过 500 字符', trigger: 'blur' }],
 }
 
-// 📌 弹窗打开时同步初始数据
+// ✅ 弹窗打开/数据变更时同步回填
 watch(
-  () => props.modelValue,
-  (visible) => {
-    if (!visible) {
-      return
-    }
-
+  [() => props.modelValue, () => props.initialData],
+  ([visible]) => {
+    if (!visible) return
     form.name = props.initialData.name
     form.description = props.initialData.description
-
-    // 清除上一次打开弹窗时留下的校验状态
-    formRef.value?.clearValidate()
+    formRef.value?.clearValidate() // 清除上一次残留报错
   },
+  { deep: true }, // 监听对象内部变化
 )
 
 // 关闭弹窗
 const handleClose = () => {
+  if (submitting.value) return // 提交中禁止关闭
   emit('update:modelValue', false)
 }
 
-// 提交表单
+// ✅ 修复：正确的异步验证流程
 const handleSubmit = async () => {
-  if (submitting.value) {
-    return
+  if (submitting.value) return
+
+  // 1. 执行 Element Plus 内置验证
+  try {
+    await formRef.value?.validate()
+  } catch {
+    return // 验证失败，Element 已自动提示
   }
 
-  // 📌 提交之前先执行前端表单校验
-  const valid = await formRef.value?.validate()
-
-  if (!valid) {
-    return
-  }
-
+  // 2. 清洗数据
   const data = {
     name: form.name.trim(),
     description: form.description.trim(),
   }
 
+  // 3. 提交（交给父组件处理 API）
   submitting.value = true
-
   try {
     emit('submit', data)
   } finally {
@@ -135,7 +118,7 @@ const handleSubmit = async () => {
           v-model="form.description"
           type="textarea"
           :rows="5"
-          placeholder="简单描述这个知识库的用途，例如：用于存放 Python、FastAPI 相关学习资料"
+          placeholder="例如：用于存放 Python、FastAPI 相关学习资料"
           maxlength="500"
           show-word-limit
         />
@@ -144,10 +127,9 @@ const handleSubmit = async () => {
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleClose"> 取消 </el-button>
-
+        <el-button :disabled="submitting" @click="handleClose">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="handleSubmit">
-          {{ isEdit ? '保存修改' : '创建知识库' }}
+          {{ submitText }}
         </el-button>
       </div>
     </template>
@@ -159,32 +141,37 @@ const handleSubmit = async () => {
   padding-top: 4px;
 }
 
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
+/* 表单项间距 */
 :deep(.el-form-item) {
   margin-bottom: 22px;
 }
-
 :deep(.el-form-item:last-child) {
   margin-bottom: 0;
 }
 
+/* 标签统一 */
 :deep(.el-form-item__label) {
   margin-bottom: 8px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--el-text-color-primary); /* ✅ EP 变量、明暗自动适配 */
 }
 
+/* 输入框统一样式 */
 :deep(.el-input__wrapper) {
   min-height: 40px;
+  border-radius: 8px;
 }
-
 :deep(.el-textarea__inner) {
   line-height: 1.6;
   resize: vertical;
+  border-radius: 8px;
+}
+
+/* 按钮区 */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
 }
 </style>

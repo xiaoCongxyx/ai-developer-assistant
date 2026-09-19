@@ -1,0 +1,54 @@
+/* ===== 浅色模式（默认）===== */
+:root {
+  --bg-page: #f5f7fa;
+  --bg-sidebar: #ffffff;
+  --bg-sidebar-hover: #f0f7ff;
+  --bg-sidebar-active: #e6f4ff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fafbfc;
+
+  --text-primary: #1d2129;
+  --text-secondary: #4e5969;
+  --text-tertiary: #86909c;
+
+  --border-color: #e5e6eb;
+  --border-light: #f2f3f5;
+
+  --sidebar-text: #4e5969;
+  --sidebar-text-hover: #1d7dfa;
+  --sidebar-text-active: #1d7dfa;
+  --sidebar-bg-hover: #e8f3ff;
+  --sidebar-bg-active: #e1efff;
+}
+
+/* ===== 暗色模式（跟随 Element Plus）===== */
+.dark {
+  --bg-page: #17171a;
+  --bg-sidebar: #1b1b1f;
+  --bg-sidebar-hover: #27272b;
+  --bg-sidebar-active: #2b2b2f;
+  --bg-card: #1f1f23;
+  --bg-card-hover: #27272b;
+
+  --text-primary: #e5eaf3;
+  --text-secondary: #a3a6b3;
+  --text-tertiary: #696e80;
+
+  --border-color: #333640;
+  --border-light: #2b2d36;
+
+  --sidebar-text: #c9cdd4;
+  --sidebar-text-hover: #79b8ff;
+  --sidebar-text-active: #79b8ff;
+  --sidebar-bg-hover: #252e3d;
+  --sidebar-bg-active: #2a3b55;
+}
+
+/* ===== 全局过渡：明暗切换顺滑 ===== */
+:root,
+:root * {
+  transition: background-color 0.25s ease,
+              color 0.25s ease,
+              border-color 0.25s ease,
+              box-shadow 0.25s ease;
+}

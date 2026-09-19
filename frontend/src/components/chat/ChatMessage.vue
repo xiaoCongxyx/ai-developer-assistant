@@ -28,9 +28,7 @@ const handleRegenerate = () => {
   emit('regenerate')
 }
 
-const isUser = computed(() => {
-  return msgProps.message.role === 'user'
-})
+const isUser = computed(() => msgProps.message.role === 'user')
 </script>
 
 <template>
@@ -40,11 +38,10 @@ const isUser = computed(() => {
         <div v-if="msgProps.message.loading && !msgProps.message.content" class="thinking">
           AI 正在思考...
         </div>
-
         <div v-else v-html="htmlContent"></div>
       </div>
 
-      <!-- AI 消息操作 -->
+      <!-- AI 消息操作区 -->
       <div
         v-if="
           msgProps.message.role === 'assistant' &&
@@ -54,9 +51,8 @@ const isUser = computed(() => {
         "
         class="message-actions"
       >
-        <button @click="copyMessage">复制</button>
-
-        <button @click="handleRegenerate">重新生成</button>
+        <el-button text size="small" @click="copyMessage">复制</el-button>
+        <el-button text size="small" type="primary" @click="handleRegenerate">重新生成</el-button>
       </div>
     </div>
   </div>
@@ -65,6 +61,7 @@ const isUser = computed(() => {
 <style scoped>
 .message {
   display: flex;
+  margin-bottom: 20px;
 }
 
 .message.user {
@@ -76,47 +73,58 @@ const isUser = computed(() => {
 }
 
 .message-wrapper {
-  max-width: 70%;
+  max-width: 72%;
+  display: flex;
+  flex-direction: column;
 }
 
+/* 消息气泡 */
+.bubble {
+  padding: 14px 18px;
+  border-radius: 14px;
+  line-height: 1.7;
+  word-break: break-word;
+  transition: all 0.2s ease;
+}
+
+/* 用户消息 */
+.user .bubble {
+  background: var(--el-color-primary);
+  color: #ffffff;
+  border-bottom-right-radius: 6px;
+}
+
+/* AI 消息 */
+.assistant .bubble {
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  border: 1px solid var(--el-border-color-light);
+  border-bottom-left-radius: 6px;
+}
+
+/* 思考中 */
+.thinking {
+  color: var(--el-text-color-secondary);
+  font-style: italic;
+}
+
+/* 操作按钮区 */
 .message-actions {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   margin-top: 6px;
+  padding-left: 8px;
 }
 
-.message-actions button {
-  padding: 3px 6px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 12px;
-  cursor: pointer;
+/* Markdown 内容适配 */
+.bubble :deep(p) {
+  margin: 0 0 8px;
 }
-
-.message-actions button:hover {
-  color: var(--color-primary);
+.bubble :deep(p:last-child) {
+  margin-bottom: 0;
 }
-
-.bubble {
-  padding: 12px 16px;
-  border-radius: 12px;
-  line-height: 1.6;
-  word-break: break-word;
-}
-
-.user .bubble {
-  background: var(--color-primary);
-  color: white;
-}
-
-.assistant .bubble {
-  background: white;
-  border: 1px solid var(--border-color);
-}
-
-.thinking {
-  color: #909399;
-  font-style: italic;
+.bubble :deep(pre) {
+  margin: 10px 0;
+  border-radius: 8px;
 }
 </style>
