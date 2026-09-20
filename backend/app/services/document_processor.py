@@ -22,7 +22,7 @@ from app.services.file_storage import get_storage_path
 from app.services.document_chunk_processor import (
     process_document_chunks
 )
-from app.services.document_indexer import DocumentIndexer
+from app.services.document_indexer import COLLECTION_NAME, DocumentIndexer
 
 async def process_document(
     db: Session, 
@@ -65,8 +65,11 @@ async def process_document(
     # 它本身不负责具体的 PDF 解析细节。
 
     # 1. 修改状态为 processing
+    previous_status = document.status
+
     document.status = DOCUMENT_STATUS_PROCESSING
-    document.error_message = ""
+    document.error_message = None
+
 
     db.commit()
 
@@ -102,6 +105,14 @@ async def process_document(
             create_document_content(db, document.id, text)
         else:
             update_document_content(db, document_content, text)
+
+        # 重新索引前清理旧向量
+        # 避免旧向量与新 Chunk 同时存在，导致检索结果污染。
+        if previous_status == DOCUMENT_STATUS_COMPLETED:
+            await document_indexer.vector_store_service.delete_document_vectors(
+                collection_name=COLLECTION_NAME,
+                document_id=document.id
+            )
 
         # 5. Chunking 文本 → Chunk
         document_chunks = process_document_chunks(db, document)

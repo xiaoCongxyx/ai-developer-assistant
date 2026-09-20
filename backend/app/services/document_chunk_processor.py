@@ -19,10 +19,17 @@ from app.services.document_content import (
 def process_document_chunks(db: Session, document: Document) -> list:
     """
     将 DocumentContent 切分为 DocumentChunk。
+
+    处理流程：
+    1. 获取文档原文
+    2. 删除旧 Chunk
+    3. 重新切分文本
+    4. 创建新 Chunk
+    5. 提交事务
     """
 
-    # 获取已经解析好的文档内容
-    document_content = get_document_content(db, Document.id)
+    # 获取已经解析好的文档内容 使用当前 Document 实例的 ID
+    document_content = get_document_content(db=db, document_id=document.id)
 
     if document_content is None:
         raise ValueError(
@@ -32,8 +39,13 @@ def process_document_chunks(db: Session, document: Document) -> list:
     # 调用纯 Chunking 算法
     chunks = split_text(document_content.content, chunk_size=500, chunk_overlap=100)
 
+    if not chunks:
+        raise ValueError(
+            "文本切分后没有生成 Chunk"
+        )
+
     # 重新处理时先删除旧 Chunk
-    delete_document_chunks(db, document.id)
+    delete_document_chunks(db=db, document_id=document.id)
 
     # 创建新的 Chunk
     document_chunks = create_document_chunks(db, document.id, chunks)
