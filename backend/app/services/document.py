@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from app.schemas.document import DocumentCreate, DocumentUpdate
 from app.models.document import Document
 from app.models.knowledge_base import KnowledgeBase
+from app.services.vector_store import VectorStoreService
+from app.services.file_storage import get_storage_path
 
 
 def create_document(db: Session, data: DocumentCreate) -> Document:
@@ -61,46 +63,7 @@ def get_documents(db: Session, knowledge_base_id: int) -> list[Document]:
 
     return list(result.scalars().all())
 
-def get_document(db: Session, document_id: int) -> Document | None:
-    """
-    根据 documnet_id 查询 Document
-    """
-
-    result = db.execute(
-        select(Document)
-        .where(Document.id == document_id)
-    )
-
-    return result.scalar_one_or_none()
-
-def update_document(db: Session, document: Document, data: DocumentUpdate) -> Document:
-    """
-    更新 Document
-    """
-
-    # 当前阶段：
-    # 只允许修改文档名称。
-    #
-    # knowledge_base_id、file_path、file_type 等字段
-    # 暂时不允许通过普通更新接口修改。
-    document.name = data.name
-
-    db.commit()
-    db.refresh(document)
-
-    return document
-
-def delete_document(db: Session, document: Document) -> None:
-    """
-    删除 Document
-    """
-
-    db.delete(document)
-    db.commit()
-
-
-
-def get_document_by_knowledge_base(db: Session, knowledge_base_id: int, document_id: int) -> Document | None:
+def get_document(db: Session, knowledge_base_id: int, document_id: int) -> Document | None:
     # 嵌套路由必须同时校验：
     #
     # 1. Document 是否存在
@@ -120,3 +83,70 @@ def get_document_by_knowledge_base(db: Session, knowledge_base_id: int, document
     )
 
     return result.scalar_one_or_none()
+# def get_document(db: Session, document_id: int) -> Document | None:
+#     """
+#     根据 documnet_id 查询 Document
+#     """
+
+#     result = db.execute(
+#         select(Document)
+#         .where(Document.id == document_id)
+#     )
+
+#     return result.scalar_one_or_none()
+
+def update_document(db: Session, document: Document, data: DocumentUpdate) -> Document:
+    """
+    更新 Document
+    """
+
+    # 当前阶段：
+    # 只允许修改文档名称。
+    #
+    # knowledge_base_id、file_path、file_type 等字段
+    # 暂时不允许通过普通更新接口修改。
+    document.name = data.name
+
+    db.commit()
+    db.refresh(document)
+
+    return document
+
+async def delete_document(
+    db: Session, 
+    document: Document,
+    vector_store_service: VectorStoreService,
+    collection_name: str
+) -> None:
+    """
+    删除文档及其关联资源。
+
+    删除流程：
+    1. 删除 Qdrant 中的文档向量
+    2. 删除数据库中的 Document
+    3. 删除本地文件
+    """
+
+    if document.id <= 0:
+        raise ValueError("Document ID 必须是正整数")
+    if not collection_name.strip():
+        raise ValueError("集合名称不能为空")
+
+    document_id = document.id
+    file_path = document.file_path
+    
+    # 1. 删除文档对应的全部向量  删除 Qdrant 向量
+    await vector_store_service.delete_document_vectors(
+        collection_name=collection_name,
+        document_id=document_id
+    )
+
+    # 2. 删除数据库中的 Document
+    db.delete(document)
+    db.commit()
+
+    # 3. 删除本地文件
+    storage_path = get_storage_path(file_path)
+
+    if storage_path.exists():
+        storage_path.unlink()

@@ -13,10 +13,14 @@ class VectorStoreService:
     async def store_embeddings(self, collection_name: str, points: list[dict]):
         # Service 负责业务层调用，
         # Provider 负责具体 Qdrant 操作。
+        if not collection_name.strip():
+            raise ValueError("集合名称不能为空")
         if not points:
             return
+
         try:
             return await self.vector_store.upsert(collection_name=collection_name, points=points)
+            
         except Exception as e:
             raise RuntimeError(f"向量存储失败：{str(e)}") from e
 
@@ -29,6 +33,8 @@ class VectorStoreService:
     ) -> list[dict]:
         if not query_vector:
             return []
+        if not collection_name.strip():
+            raise ValueError("集合名称不能为空")
 
         try:
           return await self.vector_store.search(
@@ -39,3 +45,18 @@ class VectorStoreService:
           )
         except Exception as e:
             return []  # 检索失败不抛错，RAG 降级回答
+
+    async def delete_document_vectors(
+        self,
+        collection_name: str,
+        document_id: int
+    ) -> None:
+        if document_id <= 0:
+            raise ValueError("Document ID 必须是正整数")
+        if not collection_name.strip():
+            raise ValueError("集合名称不能为空")
+
+        await self.vector_store.delete_by_document_id(
+            collection_name=collection_name,
+            document_id=document_id
+        )

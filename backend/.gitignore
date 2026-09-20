@@ -1,4 +1,11 @@
+# 环境与依赖
 .env
 .venv/
 __pycache__/
+
+# 数据库
 *.db
+
+# 上传文件 —— 排除所有，但保留 .gitkeep
+backend/storage/documents/*
+!backend/storage/documents/.gitkeep

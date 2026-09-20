@@ -1,6 +1,9 @@
-from logging import Logger
 from app.services.embedding import EmbeddingService
 from app.services.vector_store import VectorStoreService
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 COLLECTION_NAME = "document_chunks"
 
@@ -36,7 +39,7 @@ class DocumentIndexer:
             chunks: 含有 id/document_id/chunk_index/content 属性的对象列表
         """
         if not chunks:
-            Logger.debug("index_chunks：无片段，跳过")
+            logger.debug("index_chunks：无片段，跳过")
             return
         
         texts = [

@@ -47,3 +47,19 @@ class VectorStore(ABC):
         返回: 【文档+相似度分数】列表
         """
         raise NotImplementedError
+
+    @abstractmethod
+    async def delete_by_document_id(
+        self,
+        collection_name: str,
+        document_id: int
+    ) -> None:
+        """
+        删除指定文档对应的全部向量。
+
+        📌 必懂：
+        一个 Document 可能对应多个 Chunk，
+        每个 Chunk 都可能对应一个向量。
+        """
+
+        raise NotImplementedError

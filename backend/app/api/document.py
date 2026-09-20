@@ -13,7 +13,6 @@ from app.services.document import (
     create_document,
     delete_document,
     get_document,
-    get_document_by_knowledge_base,
     get_documents,
     update_document,
 )
@@ -24,7 +23,7 @@ from app.core.file import (
 )
 
 from app.services.file_storage import get_storage_path, save_upload_file
-from app.services.document_indexer import DocumentIndexer
+from app.services.document_indexer import COLLECTION_NAME, DocumentIndexer
 from app.providers.qdrant_vector_store import QdrantVectorStore
 from app.providers.siliconflow_embedding import SiliconFlowEmbeddingProvider
 from app.services.embedding import EmbeddingService
@@ -183,7 +182,7 @@ def update_document_api(knowledge_base_id: int, document_id: int, data: Document
     # 更新之前同样必须校验 Document
     # 是否属于当前 KnowledgeBase。
 
-    document = get_document_by_knowledge_base(db, knowledge_base_id, document_id)
+    document = get_document(db, knowledge_base_id, document_id)
 
     if document is None:
         raise HTTPException(
@@ -197,18 +196,46 @@ def update_document_api(knowledge_base_id: int, document_id: int, data: Document
     "/{document_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-def delete_document_api(knowledge_base_id: int, document_id: int, db: Session = Depends(get_db)):
+async def delete_document_api(
+    knowledge_base_id: int, 
+    document_id: int, 
+    db: Session = Depends(get_db),
+    indexer: DocumentIndexer = Depends(get_document_indexer)
+):
     # 删除同样必须校验父资源关系。
 
-    document = get_document_by_knowledge_base(db, knowledge_base_id, document_id)
+    # 1. 校验文档是否属于当前知识库
+    document = get_document(db, knowledge_base_id, document_id)
 
     if document is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document 不存在",
         )
+    try:
+        await delete_document(
+            db=db,
+            document=document,
+            vector_store_service=indexer.vector_store_service,
+            collection_name=COLLECTION_NAME
+        )
 
-    delete_document(db, document)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    
+    except Exception:
+        logger.exception(
+            "删除 Document 失败: document_id=%s",
+            document_id,
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Document 删除失败",
+        )
 
     return None
 
