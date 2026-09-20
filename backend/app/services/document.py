@@ -125,8 +125,8 @@ async def delete_document(
 
     删除流程：
     1. 删除 Qdrant 中的文档向量
-    2. 删除数据库中的 Document
-    3. 删除本地文件
+    2. 删除本地文件
+    3. 删除数据库中的 Document
     """
 
     if document.id <= 0:
@@ -144,21 +144,28 @@ async def delete_document(
             document_id=document_id
         )
 
-        # 2. 删除数据库中的 Document
-        db.delete(document)
-        db.commit()
-
-        # 3. 删除本地文件
+        # 2. 删除本地文件
         if file_path:
             storage_path = get_storage_path(file_path)
 
             if storage_path.exists():
                 storage_path.unlink()
 
+                logger.info(
+                    "本地文件删除成功：document_id=%s, path=%s",
+                    document_id,
+                    file_path,
+                )
+
+        # 3. 删除数据库中的 Document
+        db.delete(document)
+        db.commit()
+
         logger.info(
             "文档删除成功：document_id=%s",
             document_id,
         )
+
     except Exception:
         db.rollback()
 

@@ -204,5 +204,10 @@ class QdrantVectorStore(VectorStore):
             )
 
         except Exception as e:
-            logger.error(f"删除向量失败 {collection_name} doc={document_id}: {e}")
-            raise RuntimeError(f"删除向量失败: {e}") from e
+            logger.exception(
+                "删除向量失败：collection=%s, document_id=%s, error=%s",
+                collection_name,
+                document_id,
+                str(e),
+            )
+            raise

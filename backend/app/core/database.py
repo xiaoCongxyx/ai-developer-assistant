@@ -19,7 +19,9 @@ engine = create_engine(
 #
 # Session 可以理解成：
 # 我们操作数据库时使用的“工作会话”。
+# expire_on_commit 可以减少提交后对象属性被自动过期导致的额外数据库访问
 SessionLocal = sessionmaker(
   bind=engine,
   autoflush=False,
+  expire_on_commit=False
 )

@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
@@ -30,6 +30,8 @@ from app.services.embedding import EmbeddingService
 from app.services.vector_store import VectorStoreService
 from app.services.document_processor import process_document
 from app.core.config import settings
+from app.tasks.document_tasks import process_document_task
+from app.dependencies.indexer import get_document_indexer
 
 logger = logging.getLogger(__name__)
 
@@ -37,28 +39,6 @@ router = APIRouter(
     prefix="/knowledge-bases/{knowledge_base_id}/documents",
     tags=["Document"],
 )
-
-# ==================== 依赖注入：单例模式 ====================
-# 全局一次性初始化，避免每次请求重建客户端
-def _build_indexer() -> DocumentIndexer:
-    """组装全套索引基础设施：仅执行一次"""
-    embedding_provider = SiliconFlowEmbeddingProvider()
-    embedding_service = EmbeddingService(embedding_provider)
-    vector_store = QdrantVectorStore(
-        host=settings.QDRANT_HOST,
-        port=settings.QDRANT_PORT
-    )
-    vector_store_service = VectorStoreService(vector_store)
-    return DocumentIndexer(embedding_service, vector_store_service)
-
-# 懒加载单例
-_indexer_instance: DocumentIndexer | None = None
-def get_document_indexer() -> DocumentIndexer:
-    """首次调用初始化，后续直接复用"""
-    global _indexer_instance
-    if _indexer_instance is None:
-        _indexer_instance = _build_indexer()
-    return _indexer_instance
 
 # ==================== 辅助工具函数 ====================
 def _cleanup_file(file_path: str) -> None:
@@ -246,9 +226,9 @@ async def delete_document_api(
 )
 async def upload_document_api(
     knowledge_base_id: int, 
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...), 
     db: Session = Depends(get_db), 
-    indexer: DocumentIndexer = Depends(get_document_indexer)
 ):
     """
     上传文档并触发解析→分块→向量化→索引
@@ -331,7 +311,11 @@ async def upload_document_api(
     try:
         document = create_document(db, data=document)
 
-        await process_document(db, document, indexer)
+        # await process_document(db, document, indexer)
+        background_tasks.add_task(
+            process_document_task,
+            document.id
+        )
 
         db.refresh(document)
 
