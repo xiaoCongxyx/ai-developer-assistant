@@ -6,6 +6,8 @@ from app.models.document import Document
 from app.models.knowledge_base import KnowledgeBase
 from app.services.vector_store import VectorStoreService
 from app.services.file_storage import get_storage_path
+import logging
+logger = logging.getLogger(__name__)
 
 
 def create_document(db: Session, data: DocumentCreate) -> Document:
@@ -135,18 +137,34 @@ async def delete_document(
     document_id = document.id
     file_path = document.file_path
     
-    # 1. 删除文档对应的全部向量  删除 Qdrant 向量
-    await vector_store_service.delete_document_vectors(
-        collection_name=collection_name,
-        document_id=document_id
-    )
+    try:
+        # 1. 删除文档对应的全部向量  删除 Qdrant 向量
+        await vector_store_service.delete_document_vectors(
+            collection_name=collection_name,
+            document_id=document_id
+        )
 
-    # 2. 删除数据库中的 Document
-    db.delete(document)
-    db.commit()
+        # 2. 删除数据库中的 Document
+        db.delete(document)
+        db.commit()
 
-    # 3. 删除本地文件
-    storage_path = get_storage_path(file_path)
+        # 3. 删除本地文件
+        if file_path:
+            storage_path = get_storage_path(file_path)
 
-    if storage_path.exists():
-        storage_path.unlink()
+            if storage_path.exists():
+                storage_path.unlink()
+
+        logger.info(
+            "文档删除成功：document_id=%s",
+            document_id,
+        )
+    except Exception:
+        db.rollback()
+
+        logger.exception(
+            "文档删除失败：document_id=%s",
+            document_id,
+        )
+
+        raise

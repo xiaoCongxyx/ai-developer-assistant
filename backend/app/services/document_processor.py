@@ -68,7 +68,7 @@ async def process_document(
     previous_status = document.status
 
     document.status = DOCUMENT_STATUS_PROCESSING
-    document.error_message = None
+    document.error_message = ""
 
 
     db.commit()

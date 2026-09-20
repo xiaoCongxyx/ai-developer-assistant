@@ -1,9 +1,14 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, Integer, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.prompt import Base
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.document import Document
 
 
 class DocumentChunk(Base):
@@ -22,6 +27,11 @@ class DocumentChunk(Base):
     document_id: Mapped[int] = mapped_column(
         ForeignKey("documents.id"),
         nullable=False,
+    )
+
+    document: Mapped["Document"] = relationship(
+        "Document",
+        back_populates="chunks",
     )
 
     chunk_index: Mapped[int] = mapped_column(

@@ -1,9 +1,15 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, Integer, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.prompt import Base
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.document import Document
+
 
 class DocumentContent(Base):
     __tablename__ = "document_contents"
@@ -26,6 +32,11 @@ class DocumentContent(Base):
         ForeignKey("documents.id"),
         nullable=False,
         unique=True,
+    )
+
+    document: Mapped["Document"] = relationship(
+        "Document",
+        back_populates="contents",
     )
 
     # Parser 最终得到的完整文本。

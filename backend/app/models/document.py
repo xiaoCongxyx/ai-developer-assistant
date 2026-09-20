@@ -1,9 +1,14 @@
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.prompt import Base
+
+if TYPE_CHECKING:
+    from app.models.document_content import DocumentContent
+    from app.models.document_chunk import DocumentChunk
 
 class Document(Base):
     __tablename__ = "documents"
@@ -22,6 +27,19 @@ class Document(Base):
     knowledge_base_id: Mapped[int] = mapped_column(
         ForeignKey("knowledge_bases.id"),
         nullable=False,
+    )
+
+    contents: Mapped["DocumentContent | None"] = relationship(
+        "DocumentContent",
+        back_populates="document",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    chunks: Mapped[list["DocumentChunk"]] = relationship(
+        "DocumentChunk",
+        back_populates="document",
+        cascade="all, delete-orphan",
     )
 
     name: Mapped[str] = mapped_column(
