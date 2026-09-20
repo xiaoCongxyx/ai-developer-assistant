@@ -21,7 +21,7 @@ export const useDocumentStore = defineStore('document', () => {
     if (!isValidId(knowledgeBaseId)) {
       throw new Error('知识库 ID 无效')
     }
-    
+
     loading.value = true
 
     try {
@@ -55,6 +55,21 @@ export const useDocumentStore = defineStore('document', () => {
   }
 
   /**
+ * 判断当前是否存在正在处理的文档
+ *
+ * pending 和 processing 都表示后端任务尚未结束。
+ *
+ * 状态判断集中在 Store 中，避免页面组件重复编写业务规则。
+ */
+const hasProcessingDocuments = (): boolean => {
+  return documents.value.some(
+    (document) =>
+      document.status === 'pending' ||
+      document.status === 'processing',
+  )
+}
+
+  /**
    * 上传文档
    * 成功后插入列表顶部，即时展示
    * @param knowledgeBaseId 知识库 ID
@@ -79,6 +94,7 @@ export const useDocumentStore = defineStore('document', () => {
     loading,
     fetchDocuments,
     deleteDocument,
-    uploadDocument
+    uploadDocument,
+    hasProcessingDocuments
   }
 })

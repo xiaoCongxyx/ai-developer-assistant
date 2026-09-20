@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type { Document } from '@/types/document'
 import DocumentStatus from './DocumentStatus.vue'
-import { Document as DocumentIcon } from '@element-plus/icons-vue' // ✅ 补全图标导入
+import { Document as DocumentIcon } from '@element-plus/icons-vue' // 补全图标导入
 
 const props = defineProps<{
   item: Document
@@ -41,7 +41,7 @@ const friendlySize = computed(() => formatSize(props.item.file_size))
       </div>
 
       <!-- 状态标签：独立组件 -->
-      <DocumentStatus :status="item.status" />
+      <DocumentStatus :status="item.status" :error-message="item.error_message" />
     </div>
 
     <!-- 右侧：删除操作 -->
@@ -52,28 +52,29 @@ const friendlySize = computed(() => formatSize(props.item.file_size))
 </template>
 
 <style scoped>
-/* 卡片容器：标准变量、明暗自动适配 */
 .document-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+
   padding: 14px 20px;
-  border: 1px solid var(--el-border-color-lighter); /* ✅ EP 标准变量 */
-  border-radius: 10px; /* ✅ 统一全局圆角 */
-  background: var(--el-bg-color); /* ✅ 明暗自动跟随 */
+
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+  background: var(--el-bg-color);
+
   transition:
     border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
-/* hover 反馈：柔和不刺眼 */
 .document-card:hover {
   border-color: var(--el-color-primary-light-5);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-/* 主内容区：防挤压 */
 .document-main {
   display: flex;
   align-items: center;
@@ -82,45 +83,70 @@ const friendlySize = computed(() => formatSize(props.item.file_size))
   gap: 14px;
 }
 
-/* 文件图标：主色统一 */
 .document-icon {
   display: flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
+
   width: 42px;
   height: 42px;
+
   border-radius: 10px;
   background: var(--el-color-primary-light-9);
   color: var(--el-color-primary);
 }
 
-/* 文件名：单行省略、hover 提示完整 */
 .document-info {
   min-width: 0;
   flex: 1;
 }
+
 .document-info h4 {
   margin: 0 0 4px;
+
   overflow: hidden;
+
+  color: var(--el-text-color-primary);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--el-text-color-primary); /* ✅ 明暗适配 */
+
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* 元信息：弱化显示 */
 .document-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
-  color: var(--el-text-color-secondary); /* ✅ 明暗适配 */
+
+  color: var(--el-text-color-secondary);
   font-size: 12px;
 }
 
-/* 操作区：固定右侧不压缩 */
 .document-actions {
   flex-shrink: 0;
+}
+
+/* 🏢 企业实践：适配较小屏幕 */
+@media (max-width: 640px) {
+  .document-card {
+    align-items: flex-start;
+    padding: 12px 14px;
+  }
+
+  .document-main {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .document-status {
+    width: 100%;
+  }
+
+  .document-actions {
+    margin-left: auto;
+  }
 }
 </style>

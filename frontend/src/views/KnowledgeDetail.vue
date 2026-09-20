@@ -2,7 +2,7 @@
 import { useDocumentStore } from '@/stores/document'
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DocumentHeader from '@/components/document/DocumentHeader.vue'
 import DocumentList from '@/components/document/DocumentList.vue'
@@ -17,6 +17,14 @@ const uploadDialogVisible = ref(false)
 const uploading = ref(false)
 const initializing = ref(false) // 页面初始化加载状态
 
+// 文档处理状态轮询定时器
+// 📌 必懂：保存定时器 ID，后续才能停止轮询。
+const pollingTimer = ref<ReturnType<typeof setInterval> | null>(null)
+// 防止重复启动轮询
+const polling = ref(false)
+// 轮询间隔：3 秒
+const POLLING_INTERVAL = 3000
+
 // 从 URL 获取知识库ID
 const knowledgeBaseId = computed(() => {
   const val = Number(route.params.id)
@@ -27,6 +35,71 @@ const knowledgeBaseId = computed(() => {
 const knowledgeBase = computed(() =>
   knowledgeBaseStore.knowledgeBases.find((item) => item.id === knowledgeBaseId.value),
 )
+
+/**
+ * 停止文档处理状态轮询
+ *
+ * 🏢 企业实践：
+ * 所有停止逻辑统一调用这个方法，避免遗漏清理定时器。
+ */
+const stopPolling = () => {
+  if (pollingTimer.value !== null) {
+    clearInterval(pollingTimer.value)
+    pollingTimer.value = null
+  }
+  polling.value = false
+}
+
+/**
+ * 开始轮询文档处理状态
+ *
+ * 📌 必懂：
+ * 上传接口成功只代表文件已上传，
+ * 不代表文档已经完成解析、分块、向量化和入库。
+ *
+ * 🔥 面试高频：
+ * 这是典型的异步任务状态同步场景。
+ */
+const startPolling = () => {
+  // 知识库 ID 无效时，不启动轮询
+  if (!knowledgeBaseId.value) {
+    return
+  }
+
+  // 已经在轮询时，不重复创建定时器
+  if (polling.value) {
+    return
+  }
+
+  // 没有待处理文档时，不需要轮询
+  if (!documentStore.hasProcessingDocuments()) {
+    return
+  }
+
+  polling.value = true
+
+  pollingTimer.value = setInterval(async () => {
+    try {
+      // 路由发生变化后，不再继续请求旧知识库
+      if (!knowledgeBaseId.value) {
+        stopPolling()
+        return
+      }
+
+      await documentStore.fetchDocuments(knowledgeBaseId.value)
+
+      // 当前知识库中的任务全部结束
+      if (!documentStore.hasProcessingDocuments()) {
+        stopPolling()
+      }
+    } catch (error) {
+      console.error('[文档状态轮询失败]', error)
+
+      // 暂时不因为一次网络异常就停止轮询。
+      // 下一次轮询会尝试重新获取。
+    }
+  }, POLLING_INTERVAL)
+}
 
 // 返回列表
 const handleBack = () => {
@@ -53,9 +126,13 @@ const handleSubmit = async (file: File) => {
     ElMessage.success('文档上传成功，正在处理索引...')
     uploadDialogVisible.value = false
 
+    // 重新获取服务端数据，确保状态是最新的
     await documentStore.fetchDocuments(knowledgeBaseId.value)
+
+    // 如果存在 pending / processing 文档，则启动轮询
+    startPolling()
   } catch (error) {
-    console.error(error)
+    console.error('[上传文档失败]', error)
     ElMessage.error('文档上传或处理失败')
   } finally {
     uploading.value = false
@@ -118,13 +195,21 @@ const handleDeleteDocument = async (documentId: number) => {
 // 路由 ID 变化时重新加载
 watch(
   () => route.params.id,
-  () => {
-    initialize()
+  async () => {
+    // 切换知识库前，先清理旧知识库的轮询
+    stopPolling()
+
+    await initialize()
   },
 )
 
 onMounted(() => {
   initialize()
+})
+
+// 🏢 企业实践：组件卸载时必须清理定时器
+onUnmounted(() => {
+  stopPolling()
 })
 </script>
 
