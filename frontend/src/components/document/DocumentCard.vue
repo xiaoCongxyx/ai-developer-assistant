@@ -6,6 +6,7 @@ import { Document as DocumentIcon, Refresh } from '@element-plus/icons-vue' // �
 
 const props = defineProps<{
   item: Document
+  retrying?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -18,19 +19,20 @@ const friendlySize = computed(() => formatSize(props.item.file_size))
 // 仅失败状态可重试
 const canRetry = computed(() => props.item.status === 'failed')
 // 重试中防重复提交
-const retrying = ref(false)
+// const retrying = ref(false)
 
 const handleRetry = () => {
-  if (retrying.value) return
+  if (props.retrying) return
 
-  retrying.value = true
+  emit('retry', props.item.id)
+  // retrying.value = true
 
   // 等待父组件异步完成后重置 避免快速连击导致重复请求
-  Promise.resolve()
-    .then(() => emit('retry', props.item.id))
-    .finally(() => {
-      retrying.value = false
-    })
+  // Promise.resolve()
+  //   .then(() => emit('retry', props.item.id))
+  //   .finally(() => {
+  //     retrying.value = false
+  //   })
 }
 
 /** 格式化字节为易读单位 B/KB/MB */
@@ -68,7 +70,14 @@ const formatSize = (bytes: number): string => {
     <!-- 右侧：操作按钮 -->
     <div class="document-actions">
       <el-button text type="danger" @click.stop="emit('delete', item.id)"> 删除 </el-button>
-      <el-button v-if="canRetry" link type="warning" :disabled="retrying" @click.stop="handleRetry">
+      <el-button
+        v-if="canRetry"
+        link
+        type="warning"
+        :disabled="retrying"
+        :loading="retrying"
+        @click.stop="handleRetry"
+      >
         <el-icon><Refresh /></el-icon>
         重试
       </el-button>

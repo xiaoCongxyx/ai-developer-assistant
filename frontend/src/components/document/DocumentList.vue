@@ -5,6 +5,7 @@ import DocumentCard from './DocumentCard.vue'
 defineProps<{
   items: Document[]
   loading: boolean
+  isRetrying: (documentId: number) => boolean
 }>()
 
 const emit = defineEmits<{
@@ -27,6 +28,7 @@ const emit = defineEmits<{
         v-for="item in items"
         :key="item.id"
         :item="item"
+        :retrying="isRetrying(item.id)"
         @delete="emit('delete', $event)"
         @retry="emit('retry', $event)"
       />

@@ -258,6 +258,7 @@ onUnmounted(() => {
         <DocumentList
           :items="documentStore.documents"
           :loading="documentStore.loading"
+          :is-retrying="documentStore.isRetrying"
           @delete="handleDeleteDocument"
           @retry="handleRetry"
         />
