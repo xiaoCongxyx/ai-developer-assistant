@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { Document } from '@/types/document'
 import DocumentStatus from './DocumentStatus.vue'
-import { Document as DocumentIcon } from '@element-plus/icons-vue' // 补全图标导入
+import { Document as DocumentIcon, Refresh } from '@element-plus/icons-vue' // 补全图标导入
 
 const props = defineProps<{
   item: Document
@@ -10,15 +10,36 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   delete: [id: number]
+  retry: [id: number]
 }>()
 
-// ✅ 格式化文件大小：bytes → KB/MB 更易读
-const formatSize = (bytes: number) => {
+// 格式化文件大小：统一单位显示
+const friendlySize = computed(() => formatSize(props.item.file_size))
+// 仅失败状态可重试
+const canRetry = computed(() => props.item.status === 'failed')
+// 重试中防重复提交
+const retrying = ref(false)
+
+const handleRetry = () => {
+  if (retrying.value) return
+
+  retrying.value = true
+
+  // 等待父组件异步完成后重置 避免快速连击导致重复请求
+  Promise.resolve()
+    .then(() => emit('retry', props.item.id))
+    .finally(() => {
+      retrying.value = false
+    })
+}
+
+/** 格式化字节为易读单位 B/KB/MB */
+const formatSize = (bytes: number): string => {
+  if (!Number.isFinite(bytes) || bytes < 0) return '—'
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
-const friendlySize = computed(() => formatSize(props.item.file_size))
 </script>
 
 <template>
@@ -44,9 +65,13 @@ const friendlySize = computed(() => formatSize(props.item.file_size))
       <DocumentStatus :status="item.status" :error-message="item.error_message" />
     </div>
 
-    <!-- 右侧：删除操作 -->
+    <!-- 右侧：操作按钮 -->
     <div class="document-actions">
       <el-button text type="danger" @click.stop="emit('delete', item.id)"> 删除 </el-button>
+      <el-button v-if="canRetry" link type="warning" :disabled="retrying" @click.stop="handleRetry">
+        <el-icon><Refresh /></el-icon>
+        重试
+      </el-button>
     </div>
   </div>
 </template>
@@ -57,17 +82,13 @@ const friendlySize = computed(() => formatSize(props.item.file_size))
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-
   padding: 14px 20px;
-
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 10px;
   background: var(--el-bg-color);
-
   transition:
     border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    background-color 0.2s ease;
+    box-shadow 0.2s ease;
 }
 
 .document-card:hover {
@@ -84,14 +105,12 @@ const friendlySize = computed(() => formatSize(props.item.file_size))
 }
 
 .document-icon {
-  display: flex;
   flex-shrink: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-
   width: 42px;
   height: 42px;
-
   border-radius: 10px;
   background: var(--el-color-primary-light-9);
   color: var(--el-color-primary);
@@ -104,14 +123,11 @@ const friendlySize = computed(() => formatSize(props.item.file_size))
 
 .document-info h4 {
   margin: 0 0 4px;
-
   overflow: hidden;
-
   color: var(--el-text-color-primary);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
-
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -120,31 +136,26 @@ const friendlySize = computed(() => formatSize(props.item.file_size))
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-
   color: var(--el-text-color-secondary);
   font-size: 12px;
 }
 
 .document-actions {
   flex-shrink: 0;
+  display: flex;
+  gap: 4px;
 }
 
-/* 🏢 企业实践：适配较小屏幕 */
+/* 小屏幕适配 */
 @media (max-width: 640px) {
   .document-card {
     align-items: flex-start;
     padding: 12px 14px;
   }
-
   .document-main {
     flex-wrap: wrap;
     gap: 10px;
   }
-
-  .document-status {
-    width: 100%;
-  }
-
   .document-actions {
     margin-left: auto;
   }

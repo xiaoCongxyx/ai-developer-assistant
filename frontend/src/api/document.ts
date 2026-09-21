@@ -53,3 +53,13 @@ export const uploadDocument = async (knowledgeBaseId: number, file: File) => {
 
   return res
 }
+
+/**
+ * 重新上传
+ * @param knowledgeBaseId 知识库 ID
+ * @param documentId 文档 ID
+ */
+export const retryDocument = async (knowledgeBaseId: number, documentId: number) => {
+  const res = request.post<Document, Document>(`/knowledge-bases/${knowledgeBaseId}/documents/${documentId}/retry`)
+  return res
+}

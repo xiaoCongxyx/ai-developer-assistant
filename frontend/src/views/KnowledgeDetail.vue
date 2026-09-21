@@ -38,8 +38,7 @@ const knowledgeBase = computed(() =>
 
 /**
  * 停止文档处理状态轮询
- *
- * 🏢 企业实践：
+ * 统一清理轮询定时器，防止内存泄漏
  * 所有停止逻辑统一调用这个方法，避免遗漏清理定时器。
  */
 const stopPolling = () => {
@@ -51,13 +50,10 @@ const stopPolling = () => {
 }
 
 /**
+ * 启动轮询：仅在有处理中任务时运行
  * 开始轮询文档处理状态
- *
- * 📌 必懂：
  * 上传接口成功只代表文件已上传，
  * 不代表文档已经完成解析、分块、向量化和入库。
- *
- * 🔥 面试高频：
  * 这是典型的异步任务状态同步场景。
  */
 const startPolling = () => {
@@ -111,6 +107,7 @@ const handleUpload = () => {
   uploadDialogVisible.value = true
 }
 
+// 提交上传文档
 const handleSubmit = async (file: File) => {
   if (!knowledgeBaseId.value) {
     ElMessage.error('知识库 ID 无效，请刷新页面重试')
@@ -120,6 +117,11 @@ const handleSubmit = async (file: File) => {
   uploading.value = true
   console.log('上传文件File ==> ：', file)
   try {
+    // ========== 测试用：模拟失败 START ==========
+    // 取消下面注释，就能看到失败状态和重试按钮
+    // throw new Error('模拟：文件处理失败')
+    // ========== 测试用：模拟失败 END ==========
+
     // 上传成功后 Store 已本地追加，无需重复拉取
     await documentStore.uploadDocument(knowledgeBaseId.value, file)
 
@@ -131,9 +133,18 @@ const handleSubmit = async (file: File) => {
 
     // 如果存在 pending / processing 文档，则启动轮询
     startPolling()
-  } catch (error) {
-    console.error('[上传文档失败]', error)
+  } catch (err) {
+    console.error('[上传文档失败]', err)
     ElMessage.error('文档上传或处理失败')
+
+    // 👉 手动把最新一条文档改成失败状态 测试用：模拟失败
+    // const lastDoc = documentStore.documents.at(-1)
+    // if (lastDoc) {
+    //   lastDoc.status = 'failed'
+    //   lastDoc.error_message = err instanceof Error ? err.message : '未知错误'
+    // }
+
+    // ElMessage.error('上传失败，请重试')
   } finally {
     uploading.value = false
   }
@@ -192,6 +203,26 @@ const handleDeleteDocument = async (documentId: number) => {
   }
 }
 
+const handleRetry = async (documentId: number) => {
+  if (!knowledgeBaseId.value) return
+
+  try {
+    await documentStore.retryDocument(knowledgeBaseId.value, documentId)
+
+    ElMessage.success('已重新提交文档处理任务')
+    // 重启轮询确保状态实时同步
+    stopPolling()
+    await documentStore.fetchDocuments(knowledgeBaseId.value)
+    startPolling()
+  } catch (error) {
+    console.error('文档重试失败:', error)
+
+    ElMessage.error('文档重试失败，请稍后再试')
+
+    await documentStore.fetchDocuments(knowledgeBaseId.value)
+  }
+}
+
 // 路由 ID 变化时重新加载
 watch(
   () => route.params.id,
@@ -215,19 +246,22 @@ onUnmounted(() => {
 
 <template>
   <div class="knowledge-detail-page">
-    <!-- 加载状态 -->
+    <!-- 加载骨架屏 -->
     <div v-if="initializing" class="loading-container">
       <el-skeleton :rows="6" animated />
     </div>
 
     <div v-else>
       <DocumentHeader :knowledge-base="knowledgeBase" @back="handleBack" @upload="handleUpload" />
+
       <section class="document-section">
         <DocumentList
           :items="documentStore.documents"
           :loading="documentStore.loading"
           @delete="handleDeleteDocument"
+          @retry="handleRetry"
         />
+
         <DocumentUploadDialog
           v-model="uploadDialogVisible"
           :submitting="uploading"

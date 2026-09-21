@@ -9,6 +9,7 @@ defineProps<{
 
 const emit = defineEmits<{
   delete: [id: number]
+  retry: [id: number]
 }>()
 </script>
 
@@ -27,33 +28,41 @@ const emit = defineEmits<{
         :key="item.id"
         :item="item"
         @delete="emit('delete', $event)"
+        @retry="emit('retry', $event)"
       />
     </div>
   </div>
 </template>
 
 <style scoped>
-/* 容器：预留最小高度、避免空状态抖动 */
+/* 容器：预留最小高度、避免布局抖动 */
 .document-list-wrapper {
   min-height: 280px;
   margin-bottom: 24px;
 }
 
-/* 纵向列表：间距与全局协调 */
+/* 纵向列表：间距舒适统一 */
 .document-list {
   display: flex;
   flex-direction: column;
-  gap: 12px; /* ✅ 微调间距，更舒适不拥挤 */
+  gap: 12px;
 }
 
-/* ✅ 滚动条适配明暗 */
+/* 滚动条适配 — 仅在需要时显示 */
+.document-list-wrapper {
+  overflow-y: auto;
+}
+
 .document-list-wrapper::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
+
 .document-list-wrapper::-webkit-scrollbar-thumb {
   background: var(--el-border-color-darker);
   border-radius: 3px;
 }
+
 .document-list-wrapper::-webkit-scrollbar-track {
   background: transparent;
 }
