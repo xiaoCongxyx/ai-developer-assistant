@@ -14,6 +14,7 @@ from app.services.document import (
     delete_document,
     get_document,
     get_documents,
+    retry_document,
     update_document,
 )
 from app.core.file import (
@@ -24,12 +25,6 @@ from app.core.file import (
 
 from app.services.file_storage import get_storage_path, save_upload_file
 from app.services.document_indexer import COLLECTION_NAME, DocumentIndexer
-from app.providers.qdrant_vector_store import QdrantVectorStore
-from app.providers.siliconflow_embedding import SiliconFlowEmbeddingProvider
-from app.services.embedding import EmbeddingService
-from app.services.vector_store import VectorStoreService
-from app.services.document_processor import process_document
-from app.core.config import settings
 from app.tasks.document_tasks import process_document_task
 from app.dependencies.indexer import get_document_indexer
 
@@ -334,3 +329,54 @@ async def upload_document_api(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Document 创建失败",
         )
+
+
+@router.post(
+    "/{document_id}/retry",
+    response_model=DocumentResponse,
+)
+async def retry_document_api(
+    knowledge_base_id: int,
+    document_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    重试处理失败的文档。
+
+    处理流程：
+    1. 校验文档是否属于当前知识库
+    2. 重置文档状态为 pending
+    3. 清除错误信息
+    4. 提交后台处理任务
+    """
+
+    # 1. 查询文档，并校验知识库归属
+    document = get_document(
+        db=db, 
+        knowledge_base_id=knowledge_base_id, 
+        document_id=document_id
+    )
+
+    if document is None:
+        raise HTTPException(
+            status_code=404,
+            detail="文档不存在",
+        )
+    
+    # 2. 重置文档状态
+    try:
+        document = retry_document(db=db, document=document)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+    
+    # 3. 提交后台任务
+    background_tasks.add_task(
+        process_document_task,
+        document.id
+    )
+
+    return document

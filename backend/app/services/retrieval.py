@@ -103,7 +103,7 @@ class RetrievalService:
 
             retrieved_chunks.append(
                 RetrievedChunk(
-                    chunk_id,
+                    chunk_id=chunk_id,
                     document_id=chunk.document_id,
                     chunk_index=chunk.chunk_index,
                     content=chunk.content,

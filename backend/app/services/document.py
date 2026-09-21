@@ -66,6 +66,10 @@ def get_documents(db: Session, knowledge_base_id: int) -> list[Document]:
     return list(result.scalars().all())
 
 def get_document(db: Session, knowledge_base_id: int, document_id: int) -> Document | None:
+    """
+    双重校验查询 —— 存在性 + 归属关系，防越权。
+    企业实践：后续加用户/租户隔离只需改此一处
+    """
     # 嵌套路由必须同时校验：
     #
     # 1. Document 是否存在
@@ -73,9 +77,10 @@ def get_document(db: Session, knowledge_base_id: int, document_id: int) -> Docum
     #
     # 不能只通过 document_id 查询。
     #
-    # 🏢 企业实践：
     # 这种查询实际上也是一种数据隔离。
     # 后续做权限系统、多租户系统时，这个思想非常重要。
+    if knowledge_base_id <= 0 or document_id <= 0:
+        return None
 
     result = db.execute(
       select(Document).where(
@@ -96,6 +101,60 @@ def get_document(db: Session, knowledge_base_id: int, document_id: int) -> Docum
 #     )
 
 #     return result.scalar_one_or_none()
+
+def retry_document(db: Session, document: Document) -> Document:
+    """
+    重置失败文档，准备重新处理。
+
+    这个方法只负责修改数据库中的任务状态，
+    不负责执行解析、分块、Embedding 和向量入库。
+
+    状态修改与后台任务执行分离，
+    便于测试、维护和后续扩展任务队列。
+    """
+
+    # 1. 基础 ID 校验
+    if document.id <= 0:
+        raise ValueError("Document ID 必须是正整数")
+
+    # 2. 只允许失败状态重试
+    if document.status != "failed":
+        raise ValueError(
+            f"当前文档状态不允许重试：{document.status}"
+        )
+
+    try:
+        # 3. 重制文档状态
+        document.status = "pending"
+
+        # 4. 清理上一次处理失败的错误信息
+        document.error_message = ""
+
+        # 5. 提交事务
+        db.flush()
+        db.commit()
+
+        # 6. 刷新对象，确保返回最新数据库数据
+        db.refresh(document)
+
+        logger.info(
+            "文档重试状态重置成功：document_id=%s",
+            document.id,
+        )
+
+        return document
+
+    except Exception:
+        db.rollback()
+
+        logger.exception(
+            "文档重试状态重置失败：document_id=%s",
+            document.id,
+        )
+
+        raise
+
+
 
 def update_document(db: Session, document: Document, data: DocumentUpdate) -> Document:
     """
