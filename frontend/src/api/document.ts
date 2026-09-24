@@ -7,7 +7,9 @@ import type { Document } from '@/types/document'
  * @param knowledgeBaseId 知识库 ID
  */
 export const getDocuments = async (knowledgeBaseId: number) => {
-  const res = await request.get<Document[], Document[]>(`/knowledge-bases/${knowledgeBaseId}/documents`)
+  const res = await request.get<Document[], Document[]>(
+    `/knowledge-bases/${knowledgeBaseId}/documents`,
+  )
 
   return res
 }
@@ -35,6 +37,18 @@ export const deleteDocument = async (knowledgeBaseId: number, documentId: number
 }
 
 /**
+ * 批量删除文档
+ * @param knowledgeBaseId 知识库 ID
+ * @param documentIds 文档 ID 集合
+ */
+export const batchDeleteDocuments = async (knowledgeBaseId: number, documentIds: number[]) => {
+  return await request.post(
+    `/knowledge-bases/${knowledgeBaseId}/documents/batch-delete`,
+    documentIds,
+  )
+}
+
+/**
  * 上传文档
  * @param knowledgeBaseId 知识库 ID
  * @param file 待上传文件对象
@@ -48,7 +62,7 @@ export const uploadDocument = async (knowledgeBaseId: number, file: File) => {
 
   const res = await request.post<Document, Document>(
     `/knowledge-bases/${knowledgeBaseId}/documents/upload`,
-    formData
+    formData,
   )
 
   return res
@@ -60,6 +74,8 @@ export const uploadDocument = async (knowledgeBaseId: number, file: File) => {
  * @param documentId 文档 ID
  */
 export const retryDocument = async (knowledgeBaseId: number, documentId: number) => {
-  const res = request.post<Document, Document>(`/knowledge-bases/${knowledgeBaseId}/documents/${documentId}/retry`)
+  const res = request.post<Document, Document>(
+    `/knowledge-bases/${knowledgeBaseId}/documents/${documentId}/retry`,
+  )
   return res
 }

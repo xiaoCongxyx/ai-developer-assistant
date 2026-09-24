@@ -7,6 +7,7 @@ from app.models.knowledge_base import KnowledgeBase
 from app.services.vector_store import VectorStoreService
 from app.services.file_storage import get_storage_path
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -231,6 +232,64 @@ async def delete_document(
         logger.exception(
             "文档删除失败：document_id=%s",
             document_id,
+        )
+
+        raise
+
+
+async def batch_delete_document(
+    db: Session,
+    documents: list[Document],
+    vector_store_service: VectorStoreService,
+    collection_name: str
+):
+    """
+    批量删除文档。
+
+    删除顺序：
+    1. 删除向量数据
+    2. 删除本地文件
+    3. 删除数据库记录
+    """
+
+    if not documents:
+        raise ValueError("没有需要删除的文档")
+
+    try:
+        for document in documents:
+            if document.id <= 0:
+                raise ValueError(
+                    f"无效的文档 ID：{document.id}"
+                )
+
+            # 1. 删除Qdrant向量
+            await vector_store_service.delete_document_vectors(
+                collection_name=collection_name, 
+                document_id=document.id
+            )
+
+            # 2. 删除本地文件
+            if document.file_path:
+                file_path = get_storage_path(document.file_path)
+
+                if file_path.exists():
+                    file_path.unlink()
+
+            # 3. 删除数据库记录
+            db.delete(document)
+        
+        db.commit()
+
+        logger.info(
+            "批量删除文档成功，数量：%d",
+            len(documents),
+        )
+    except Exception:
+        # 删除失败 回滚数据库事务，不能回滚 Qdrant 和文件系统
+        db.rollback()
+
+        logger.exception(
+            "批量删除文档失败"
         )
 
         raise

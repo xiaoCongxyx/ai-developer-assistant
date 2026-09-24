@@ -7,11 +7,13 @@ import { Document as DocumentIcon, Refresh } from '@element-plus/icons-vue' // �
 const props = defineProps<{
   item: Document
   retrying?: boolean
+  selected: boolean
 }>()
 
 const emit = defineEmits<{
   delete: [id: number]
   retry: [id: number]
+  select: [id: number, checked: boolean]
 }>()
 
 // 格式化文件大小：统一单位显示
@@ -45,14 +47,20 @@ const formatSize = (bytes: number): string => {
 </script>
 
 <template>
-  <div class="document-card">
-    <!-- 左侧：文件图标 -->
+  <div class="document-card" :class="{ 'is-selected': selected }">
+    <!-- 复选框：最左侧，视觉分组 -->
+    <el-checkbox
+      :model-value="selected"
+      @change="(val: boolean) => emit('select', item.id, val)"
+      class="card-checkbox"
+    />
+
+    <!-- 中间：图标 + 名称 + 状态 -->
     <div class="document-main">
       <div class="document-icon">
         <el-icon :size="22"><DocumentIcon /></el-icon>
       </div>
 
-      <!-- 中间：文件名 + 类型/大小 -->
       <div class="document-info">
         <h4 :title="item.name">
           {{ item.name }}
@@ -63,8 +71,11 @@ const formatSize = (bytes: number): string => {
         </div>
       </div>
 
-      <!-- 状态标签：独立组件 -->
-      <DocumentStatus :status="item.status" :error-message="item.error_message" />
+      <DocumentStatus
+        :status="item.status"
+        :error-message="item.error_message"
+        class="card-status"
+      />
     </div>
 
     <!-- 右侧：操作按钮 -->
@@ -90,19 +101,30 @@ const formatSize = (bytes: number): string => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 14px 20px;
-  border: 1px solid var(--el-border-color-lighter);
+  gap: 14px;
+  padding: 14px 18px;
+  border: 2px solid transparent;
   border-radius: 10px;
   background: var(--el-bg-color);
   transition:
     border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
-.document-card:hover {
-  border-color: var(--el-color-primary-light-5);
+/* ✅ 选中态高亮边框 */
+.document-card.is-selected {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+}
+
+.document-card:hover:not(.is-selected) {
+  border-color: var(--el-border-color-lighter);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.card-checkbox {
+  flex-shrink: 0;
 }
 
 .document-main {
@@ -149,6 +171,10 @@ const formatSize = (bytes: number): string => {
   font-size: 12px;
 }
 
+.card-status {
+  flex-shrink: 0;
+}
+
 .document-actions {
   flex-shrink: 0;
   display: flex;
@@ -158,12 +184,14 @@ const formatSize = (bytes: number): string => {
 /* 小屏幕适配 */
 @media (max-width: 640px) {
   .document-card {
+    flex-wrap: wrap;
     align-items: flex-start;
+    gap: 10px;
     padding: 12px 14px;
   }
   .document-main {
+    width: 100%;
     flex-wrap: wrap;
-    gap: 10px;
   }
   .document-actions {
     margin-left: auto;

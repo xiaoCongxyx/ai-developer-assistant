@@ -177,6 +177,7 @@ const initialize = async () => {
   }
 }
 
+// 删除文档
 const handleDeleteDocument = async (documentId: number) => {
   console.log('删除文档')
   try {
@@ -203,6 +204,7 @@ const handleDeleteDocument = async (documentId: number) => {
   }
 }
 
+// 文档失败后重新上传
 const handleRetry = async (documentId: number) => {
   if (!knowledgeBaseId.value) return
 
@@ -218,6 +220,41 @@ const handleRetry = async (documentId: number) => {
     console.error('文档重试失败:', error)
 
     ElMessage.error('文档重试失败，请稍后再试')
+
+    await documentStore.fetchDocuments(knowledgeBaseId.value)
+  }
+}
+
+/**
+ * 批量删除文档
+ * @param documentIds 文档 id 集合
+ */
+const handleBatchDelete = async (documentIds: number[]) => {
+  if (!knowledgeBaseId.value) return
+
+  if (documentIds.length === 0) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${documentIds.length} 个文档吗？删除后无法恢复。`,
+      '批量删除文档',
+      {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await documentStore.batchDeleteDocuments(knowledgeBaseId.value, documentIds)
+    ElMessage.success(`成功删除 ${documentIds.length} 个文档`)
+  } catch (error) {
+    console.error('批量删除文档失败:', error)
+
+    ElMessage.error('批量删除失败，请稍后重试')
 
     await documentStore.fetchDocuments(knowledgeBaseId.value)
   }
@@ -261,6 +298,7 @@ onUnmounted(() => {
           :is-retrying="documentStore.isRetrying"
           @delete="handleDeleteDocument"
           @retry="handleRetry"
+          @batch-delete="handleBatchDelete"
         />
 
         <DocumentUploadDialog

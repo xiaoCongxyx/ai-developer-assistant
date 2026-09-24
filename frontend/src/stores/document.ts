@@ -8,6 +8,7 @@ import {
   deleteDocument as deleteDocumentApi,
   uploadDocument as uploadDocumentApi,
   retryDocument as retryDocumentApi,
+  batchDeleteDocuments as batchDeleteDocumentsApi
 } from '@/api/document'
 
 export const useDocumentStore = defineStore('document', () => {
@@ -69,6 +70,25 @@ export const useDocumentStore = defineStore('document', () => {
       console.error('[删除文档失败]', err)
       throw err
     }
+  }
+
+    /**
+   * 批量删除文档
+   * @param knowledgeBaseId 知识库 ID
+   * @param documentIds 文档 id 集合
+   */
+  const batchDeleteDocuments = async (knowledgeBaseId: number, documentIds: number[]) => {
+    if (!isValidId(knowledgeBaseId)) {
+      throw new Error('无效的知识库 ID')
+    }
+  
+    if (documentIds.length === 0) {
+      throw new Error('至少选择一个文档')
+    }
+
+    await batchDeleteDocumentsApi(knowledgeBaseId, documentIds)
+
+    documents.value = documents.value.filter(v => !documentIds.includes(v.id))
   }
 
   /**
@@ -143,6 +163,7 @@ export const useDocumentStore = defineStore('document', () => {
     loading,
     fetchDocuments,
     deleteDocument,
+    batchDeleteDocuments,
     uploadDocument,
     hasProcessingDocuments,
     retryDocument,

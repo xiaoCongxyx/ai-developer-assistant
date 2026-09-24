@@ -10,6 +10,7 @@ from app.schemas.document import (
     DocumentUpdate,
 )
 from app.services.document import (
+    batch_delete_document,
     create_document,
     delete_document,
     get_document,
@@ -211,6 +212,56 @@ async def delete_document_api(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Document 删除失败",
         )
+
+    return None
+
+@router.post(
+    "/batch-delete",
+    status_code=204,
+)
+async def batch_delete_documents_api(
+    knowledge_base_id: int,
+    document_ids: list[int],
+    db: Session = Depends(get_db),
+    indexer: DocumentIndexer = Depends(get_document_indexer)
+):
+    """
+    批量删除document
+    """
+    if not document_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="至少选择一个文档",
+        )
+
+    # 去重
+    document_ids = list(set(document_ids))
+
+    documents = []
+
+    for document_id in document_ids:
+        document = get_document(db, knowledge_base_id, document_id)
+
+        if document is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"文档不存在：{document_id}",
+            )
+
+        documents.append(document)
+
+    try:
+        await batch_delete_document(
+            db=db, 
+            documents=documents, 
+            vector_store_service=indexer.vector_store_service, 
+            collection_name=COLLECTION_NAME
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
 
     return None
 
