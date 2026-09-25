@@ -4,10 +4,11 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
-from app.services.document import get_document
+from app.services.document import get_document, start_document_processing
 from app.models.document import Document
 from app.services.document_processor import process_document
 from app.dependencies.indexer import get_document_indexer
+from app.constants.document import DocumentStatus
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ async def process_document_task(document_id: int) -> None:
 
     # 上下文管理器自动关闭，finally 不再遗漏
     with SessionLocal() as db:
+        document: Optional[Document] = None
         try:
             # 1. 安全获取文档（含归属校验
             document = _get_document_safe(db=db, document_id=document_id)
@@ -58,10 +60,20 @@ async def process_document_task(document_id: int) -> None:
                 )
                 return
 
-            # 2. 获取索引器（与 API 端单例完全一致）
+            # 2. 原子切换状态：pending → processing
+            # 只在原状态为 pending 时成功，防止重复处理
+            document = start_document_processing(db, document_id)
+            if document is None:
+                logger.info(
+                    "后台处理跳过：状态非 pending（已在处理/失败/完成），document_id=%s",
+                    document_id,
+                )
+                return
+
+            # 3. 获取索引器（与 API 端单例完全一致）
             document_indexer = get_document_indexer()
 
-            # 3. 执行完整处理流水线
+            # 4. 执行完整处理流水线
             await process_document(db=db, document=document, document_indexer=document_indexer)
 
             logger.info(
@@ -69,8 +81,26 @@ async def process_document_task(document_id: int) -> None:
                 document_id,
             )
 
-        except Exception:
+        except Exception as e:
             logger.exception(
                 "后台文档处理失败：document_id=%s",
                 document_id,
             )
+
+            # ✅ 状态回滚：processing → failed，避免卡死
+            if document:
+                try:
+                    document.status = DocumentStatus.FAILED.value
+                    document.error_message = str(e)[:200]  # 截断防超长
+                    db.commit()
+                    logger.info(
+                        "已重置为失败状态：document_id=%s",
+                        document_id,
+                    )
+                except Exception as commit_err:
+                    logger.error(
+                        "更新失败状态也出错：document_id=%s, %s",
+                        document_id,
+                        str(commit_err),
+                    )
+                    db.rollback()

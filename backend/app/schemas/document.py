@@ -1,6 +1,8 @@
 from datetime import datetime
 from pydantic import BaseModel
 
+from app.constants.document import DocumentStatus
+
 class DocumentCreate(BaseModel):
     knowledge_base_id: int
 
@@ -31,7 +33,7 @@ class DocumentResponse(BaseModel):
     file_size: int
 
     # status 是文档处理生命周期的一部分。
-    status: str
+    status: DocumentStatus
 
     error_message: str
 

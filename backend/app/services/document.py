@@ -8,6 +8,8 @@ from app.services.vector_store import VectorStoreService
 from app.services.file_storage import get_storage_path
 import logging
 
+from app.constants.document import DocumentStatus
+
 logger = logging.getLogger(__name__)
 
 
@@ -119,14 +121,14 @@ def retry_document(db: Session, document: Document) -> Document:
         raise ValueError("Document ID 必须是正整数")
 
     # 2. 只允许失败状态重试
-    if document.status != "failed":
+    if document.status != DocumentStatus.FAILED.value:
         raise ValueError(
             f"当前文档状态不允许重试：{document.status}"
         )
 
     try:
         # 3. 重制文档状态
-        document.status = "pending"
+        document.status = DocumentStatus.PENDING.value
 
         # 4. 清理上一次处理失败的错误信息
         document.error_message = ""
@@ -293,3 +295,37 @@ async def batch_delete_document(
         )
 
         raise
+
+def start_document_processing(db: Session, document_id: int) -> Document | None:
+    """
+    将 pending 文档原子地转换为 processing。
+
+    只有 pending 状态的文档才能成功转换。
+    """
+
+    statement = select(Document).where(
+        Document.id == document_id,
+        Document.status == DocumentStatus.PENDING.value
+    )
+
+    document = db.execute(
+        statement
+    ).scalar_one_or_none()
+
+    if document is None:
+        return None
+    
+    document.status = DocumentStatus.PROCESSING.value
+
+    db.commit()
+    db.refresh(document)
+
+    return document
+
+def document_exists(db: Session, document_id: int) -> bool:
+    """
+    查询 document_id 这条记录是否还存在
+    """
+    statement = select(Document.id).where(Document.id == document_id)
+
+    return db.execute(statement).scalar_one_or_none() is not None

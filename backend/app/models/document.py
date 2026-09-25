@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.prompt import Base
+from app.constants.document import DocumentStatus
 
 if TYPE_CHECKING:
     from app.models.document_content import DocumentContent
@@ -68,21 +69,14 @@ class Document(Base):
         default=0,
     )
 
-    # 文档处理状态。
-    #
-    # 当前阶段先使用字符串。
-    # 后面进入文档解析 / Chunk / Embedding 时，
-    # 这个字段会变得非常重要。
-    #
-    # 例如：
-    # pending    → 等待处理
-    # processing → 正在处理
-    # completed  → 处理完成
-    # failed     → 处理失败
+    # ========== 处理状态 ==========
+    # 统一使用 Mapped + mapped_column 风格，保持写法一致
     status: Mapped[str] = mapped_column(
-        String(30),
+        String(20),
         nullable=False,
-        default="pending",
+        default=DocumentStatus.PENDING.value,
+        index=True,  # 状态频繁筛选，加索引提升查询速度
+        comment="处理状态：pending/processing/completed/failed",
     )
 
     # 错误信息。
