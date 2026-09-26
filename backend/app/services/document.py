@@ -9,6 +9,7 @@ from app.services.file_storage import get_storage_path
 import logging
 
 from app.constants.document import DocumentStatus
+from app.services.document_status import DocumentStatusTransition
 
 logger = logging.getLogger(__name__)
 
@@ -120,21 +121,14 @@ def retry_document(db: Session, document: Document) -> Document:
     if document.id <= 0:
         raise ValueError("Document ID 必须是正整数")
 
-    # 2. 只允许失败状态重试
-    if document.status != DocumentStatus.FAILED.value:
-        raise ValueError(
-            f"当前文档状态不允许重试：{document.status}"
-        )
+    current_status = DocumentStatus(document.status)
+    new_status = DocumentStatusTransition.transition(current_status, target=DocumentStatus.PENDING)
+
+    document.status = new_status.value
+    document.error_message = None
 
     try:
-        # 3. 重制文档状态
-        document.status = DocumentStatus.PENDING.value
-
-        # 4. 清理上一次处理失败的错误信息
-        document.error_message = ""
-
         # 5. 提交事务
-        db.flush()
         db.commit()
 
         # 6. 刷新对象，确保返回最新数据库数据
@@ -303,22 +297,41 @@ def start_document_processing(db: Session, document_id: int) -> Document | None:
     只有 pending 状态的文档才能成功转换。
     """
 
+    if document_id <= 0:
+        return None
+
+    # 1. 先查：只取状态为 pending 的文档
+    # 原子性：数据库层面过滤，防止并发冲突
     statement = select(Document).where(
         Document.id == document_id,
-        Document.status == DocumentStatus.PENDING.value
+        Document.status == DocumentStatus.PENDING.value,
     )
-
-    document = db.execute(
-        statement
-    ).scalar_one_or_none()
+    document = db.execute(statement).scalar_one_or_none()
 
     if document is None:
+        logger.debug(
+            "无需处理：文档不存在或状态非 pending，document_id=%s",
+            document_id,
+        )
         return None
-    
-    document.status = DocumentStatus.PROCESSING.value
+
+    # 2. 状态机校验（双重保险，也可只依赖数据库过滤）
+    current_status = DocumentStatus(document.status)
+    new_status = DocumentStatusTransition.transition(
+        current=current_status,
+        target=DocumentStatus.PROCESSING,
+    )
+
+    # 3. 赋值并提交
+    document.status = new_status.value
 
     db.commit()
     db.refresh(document)
+
+    logger.info(
+        "文档状态切换为 processing：document_id=%s",
+        document_id,
+    )
 
     return document
 

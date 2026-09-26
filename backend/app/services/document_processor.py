@@ -28,6 +28,7 @@ from app.services.document import document_exists
 import logging
 
 from app.constants.document import DocumentStatus
+from app.services.document_status import DocumentStatusTransition
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +162,11 @@ async def process_document(
         await document_indexer.index_chunks(document_chunks, knowledge_base_id=document.knowledge_base_id)
 
         # 7. 修改状态为 completed 只有整个 Pipeline 成功才标记 completed
-        document.status = DocumentStatus.COMPLETED.value
+        current_status = DocumentStatus(document.status)
+        document.status = DocumentStatusTransition.transition(
+            current=current_status,
+            target=DocumentStatus.COMPLETED,
+        ).value
         document.error_message = ""
         db.commit()
 
@@ -195,10 +200,13 @@ async def process_document(
 
         # 仅当文档仍存在时更新状态
         if document_exists(db, document.id):
-            document.status = DocumentStatus.FAILED.value
-            document.error_message = str(exc)[:200]  # 防超长
-            db.commit()
+            current_status = DocumentStatus(document.status)
             try:
+                document.status = DocumentStatusTransition.transition(
+                    current=current_status,
+                    target=DocumentStatus.FAILED,
+                ).value
+                document.error_message = str(exc)[:200]
                 db.commit()
             except Exception as commit_err:
                 logger.error(
